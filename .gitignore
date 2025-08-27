@@ -3,7 +3,11 @@
 !.gitignore
 
 !MpApi/
-!MpApi/*
+!MpApi/*.ts
+!MpApi/tsconfig.json
+!MpApi/build
 
 !MpRuntime/
-!MpRuntime/*
+!MpRuntime/*.ts
+!MpRuntime/tsconfig.json
+!MpRuntime/build

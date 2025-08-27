@@ -135,21 +135,21 @@ export class MusicPlayerClass {
     currPage = new CurrPage()
     playback = new Playback()
     queue = new Queue()
-    properyStorage = new ProperyStorage()
+    propertyStorage = new PropertyStorage()
     errorManager = new ErrorManager()
-    helpers = new WebHelpers()
+    helpers = new Helpers()
     logger = new Logger()
 
     constructor() {
-        MpRuntime.log('Web loaded')
+        MpRuntime.log('MusicPlayerClass loaded')
     }
 
     getLanguage(): string {
-        return sendMessage('Web.getLanguage', JSON.stringify({}));
+        return sendMessage('PS.getLanguage', JSON.stringify({}));
     }
 
     updateAppState() {
-        sendMessage('Web.updateAppState', JSON.stringify({}));
+        sendMessage('PS.updateAppState', JSON.stringify({}));
     }
 
     fetch = (...args: any) => {
@@ -167,25 +167,25 @@ class Source {
     initPageStacks(map: {
         [name: string]: PageDescrJs[]
     }): void {
-        sendMessage('Web.initPageStacks', JSON.stringify(map));
+        sendMessage('PS.initPageStacks', JSON.stringify(map));
     }
 
     get currPageStackName(): string {
-        return sendMessage('Web.currPageStackName-get', JSON.stringify({}));
+        return sendMessage('PS.currPageStackName-get', JSON.stringify({}));
     }
     set currPageStackName(name: string) {
-        sendMessage('Web.currPageStackName-set', JSON.stringify(name));
+        sendMessage('PS.currPageStackName-set', JSON.stringify(name));
     }
 
     get currTabIdx(): number {
-        return sendMessage('Web.currTabIdx-get', JSON.stringify({}));
+        return sendMessage('PS.currTabIdx-get', JSON.stringify({}));
     }
     set currTabIdx(index: number) {
         assertType(index, 'number')
-        sendMessage('Web.currTabIdx-set', JSON.stringify(index));
+        sendMessage('PS.currTabIdx-set', JSON.stringify(index));
     }
     getTabs(): string[][] {
-        return sendMessage('Web.getTabs', JSON.stringify({}));
+        return sendMessage('PS.getTabs', JSON.stringify({}));
     }
     setTabs(arr: string[][]): void {
         if (arr.length > 0) {
@@ -193,147 +193,147 @@ class Source {
             assertType(arr[0][0], 'string')
             // assertType(arr[0][1], 'string')
         }
-        sendMessage('Web.setTabs', JSON.stringify(arr));
+        sendMessage('PS.setTabs', JSON.stringify(arr));
     }
 
     get currSearchTabIdx(): number {
-        return sendMessage('Web.currSearchTabIdx-get', JSON.stringify({}));
+        return sendMessage('PS.currSearchTabIdx-get', JSON.stringify({}));
     }
     set currSearchTabIdx(index: number) {
         assertType(index, 'number')
-        sendMessage('Web.currSearchTabIdx-set', JSON.stringify(index));
+        sendMessage('PS.currSearchTabIdx-set', JSON.stringify(index));
     }
     getSearchTabs(): string[] {
-        return sendMessage('Web.getSearchTabs', JSON.stringify({}));
+        return sendMessage('PS.getSearchTabs', JSON.stringify({}));
     }
     setSearchTabs(arr: string[]): void {
-        sendMessage('Web.setSearchTabs', JSON.stringify(arr));
+        sendMessage('PS.setSearchTabs', JSON.stringify(arr));
     }
 
     get navType() {
-        return sendMessage('Web.navType-get', JSON.stringify({}));
+        return sendMessage('PS.navType-get', JSON.stringify({}));
     }
     set navType(navType: NavType) {
-        sendMessage('Web.navType-set', JSON.stringify(navType));
+        sendMessage('PS.navType-set', JSON.stringify(navType));
     }
 
     get isShowSearch() {
-        return sendMessage('Web.isShowSearch-get', JSON.stringify({}));
+        return sendMessage('PS.isShowSearch-get', JSON.stringify({}));
     }
     set isShowSearch(isShow: boolean) {
-        sendMessage('Web.isShowSearch-set', JSON.stringify(isShow));
+        sendMessage('PS.isShowSearch-set', JSON.stringify(isShow));
     }
 
     get rightControls() {
-        return sendMessage('Web.rightControls-set', JSON.stringify({}));
+        return sendMessage('PS.rightControls-set', JSON.stringify({}));
     }
     set rightControls(controls: string[]) {
-        sendMessage('Web.rightControls-set', JSON.stringify(controls));
+        sendMessage('PS.rightControls-set', JSON.stringify(controls));
     }
 
     openPluginSettingsPage(): void {
-        sendMessage('Web.openPluginSettingsPage', JSON.stringify({}));
+        sendMessage('PS.openPluginSettingsPage', JSON.stringify({}));
     }
 
     async updateThumbnailFromUrlAsync(id: string, url: string): Promise<boolean> {
-        return await sendMessage('Web.updateThumbnailFromUrlAsync',
+        return await sendMessage('PS.updateThumbnailFromUrlAsync',
             JSON.stringify({ id: id, url: url }));
     }
 }
 
 class CurrPageStack {
     setLast(pageDescr: PageDescrJs) {
-        sendMessage('Web.currPageStack.setLast', JSON.stringify(pageDescr));
+        sendMessage('PS.currPageStack.setLast', JSON.stringify(pageDescr));
     }
     get length(): number {
-        return sendMessage('Web.currPageStack.length-get', JSON.stringify({}));
+        return sendMessage('PS.currPageStack.length-get', JSON.stringify({}));
     }
     get last(): PageDescrJs {
-        return sendMessage('Web.currPageStack.last-get', JSON.stringify({}));
+        return sendMessage('PS.currPageStack.last-get', JSON.stringify({}));
     }
     push(pageDescr: PageDescrJs) {
-        sendMessage('Web.currPageStack.push', JSON.stringify(pageDescr));
+        sendMessage('PS.currPageStack.push', JSON.stringify(pageDescr));
     }
     pop(): boolean {
-        return sendMessage('Web.currPageStack.pop', JSON.stringify({}));
+        return sendMessage('PS.currPageStack.pop', JSON.stringify({}));
     }
 }
 
 export class CurrPage {
     get title() {
-        return sendMessage('Web.currPage.title-get', JSON.stringify({}));
+        return sendMessage('PS.currPage.title-get', JSON.stringify({}));
     }
 
     set title(str: string) {
-        sendMessage('Web.currPage.title.set', JSON.stringify(str));
+        sendMessage('PS.currPage.title.set', JSON.stringify(str));
     }
 
     get sectionlist(): SectionDescrJs[] {
-        return sendMessage('Web.currPage.sectionlist-get', JSON.stringify({}))
+        return sendMessage('PS.currPage.sectionlist-get', JSON.stringify({}))
     }
 
     set sectionlist(val: SectionDescrJs[]) {
-        sendMessage('Web.currPage.sectionlist-set', JSON.stringify(val))
+        sendMessage('PS.currPage.sectionlist-set', JSON.stringify(val))
     }
 
     get header(): PageHeaderDescr {
-        return sendMessage('Web.currPage.header-get', JSON.stringify({}))
+        return sendMessage('PS.currPage.header-get', JSON.stringify({}))
     }
 
     set header(val: PageHeaderDescr) {
-        sendMessage('Web.currPage.header-set', JSON.stringify(val))
+        sendMessage('PS.currPage.header-set', JSON.stringify(val))
     }
 
     get actionButtonDescr(): CustomAction {
-        return sendMessage('Web.currPage.actionButtonDescr-get', JSON.stringify({}))
+        return sendMessage('PS.currPage.actionButtonDescr-get', JSON.stringify({}))
     }
 
     set actionButtonDescr(val: CustomAction) {
-        sendMessage('Web.currPage.actionButtonDescr-set', JSON.stringify(val))
+        sendMessage('PS.currPage.actionButtonDescr-set', JSON.stringify(val))
     }
 
     get props() {
-        return sendMessage('Web.currPage.props-get', JSON.stringify({}));
+        return sendMessage('PS.currPage.props-get', JSON.stringify({}));
     }
 
     set props(props: KeyValue) {
-        sendMessage('Web.currPage.props-set', JSON.stringify(props));
+        sendMessage('PS.currPage.props-set', JSON.stringify(props));
     }
 }
 
 
 export class Playback {
     playByIdx(index: number): void {
-        sendMessage('Web.playback.playByIdx', JSON.stringify(index));
+        sendMessage('PS.playback.playByIdx', JSON.stringify(index));
     }
 }
 
 export class Queue {
     insertAll(index: number, list: MusicItem[]): void {
         console.log('queue', index, list)
-        sendMessage('Web.queue.insertAll', JSON.stringify({ index: index, list: list }));
+        sendMessage('PS.queue.insertAll', JSON.stringify({ index: index, list: list }));
     }
     addAll(list: MusicItem[]): void {
-        sendMessage('Web.queue.addAll', JSON.stringify(list));
+        sendMessage('PS.queue.addAll', JSON.stringify(list));
     }
     removeRange(start: number, end: number): void {
-        sendMessage('Web.queue.removeRange', JSON.stringify({ start: start, end: end }));
+        sendMessage('PS.queue.removeRange', JSON.stringify({ start: start, end: end }));
     }
     getTrack(trackIndex: number): MusicItem {
-        return sendMessage('Web.queue.getTrack', JSON.stringify(trackIndex));
+        return sendMessage('PS.queue.getTrack', JSON.stringify(trackIndex));
     }
     get currTrackIdx(): number {
-        return sendMessage('Web.queue.currTrackIdx-get', JSON.stringify({}));
+        return sendMessage('PS.queue.currTrackIdx-get', JSON.stringify({}));
     }
     set currTrackIdx(index: number) {
-        sendMessage('Web.queue.currTrackIdx-set', JSON.stringify(index));
+        sendMessage('PS.queue.currTrackIdx-set', JSON.stringify(index));
     }
     get length(): number {
-        return sendMessage('Web.queue.length-get', JSON.stringify({}));
+        return sendMessage('PS.queue.length-get', JSON.stringify({}));
     }
 }
 
-class WebHelpers {
+class Helpers {
     makeTracklist(itemlist: Item[]) {
         return {
             listType: 'tracklist' as ListType,
@@ -362,24 +362,25 @@ class WebHelpers {
     }
 }
 
-export class ProperyStorage {
+// TODO: divide in PropertyStorage and Settings(Storage)
+export class PropertyStorage {
     get(name: string) {
-        return sendMessage('Web.properyStorage.get', JSON.stringify(name));
+        return sendMessage('PS.propertyStorage.get', JSON.stringify(name));
     }
     set(name: string, value: any) {
-        sendMessage('Web.properyStorage.set', JSON.stringify({ 'name': name, 'value': value }));
+        sendMessage('PS.propertyStorage.set', JSON.stringify({ 'name': name, 'value': value }));
     }
     setList(list: string[]) {
-        sendMessage('Web.properyStorage.setList', JSON.stringify(list));
+        sendMessage('PS.propertyStorage.setList', JSON.stringify(list));
     }
 }
 
 export class ErrorManager {
     get(): string {
-        return sendMessage('Web.errorManager.get', JSON.stringify({}));
+        return sendMessage('PS.errorManager.get', JSON.stringify({}));
     }
     set(err: string) {
-        sendMessage('Web.errorManager.set', JSON.stringify(err));
+        sendMessage('PS.errorManager.set', JSON.stringify(err));
     }
 }
 
