@@ -1,0 +1,29 @@
+{
+  "name": "libresound_js_libs",
+  "version": "1.0.0",
+  "main": "index.js",
+  "type": "module",
+  "scripts": {
+    "build": "npx tsc -p ./MpApi/tsconfig.json && node removeExports.js",
+    "clean": "rm -r dist"
+  },
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/motobep/libresound_js_libs.git"
+  },
+  "keywords": [
+    "libresound",
+    "API",
+    "javascript"
+  ],
+  "author": "motobep",
+  "license": "ISC",
+  "bugs": {
+    "url": "https://github.com/motobep/libresound_js_libs/issues"
+  },
+  "homepage": "https://github.com/motobep/libresound_js_libs#readme",
+  "description": "",
+  "devDependencies": {
+    "typescript": "^5.9.2"
+  }
+}

@@ -1,5 +1,0 @@
-#!/bin/bash
-
-tsc
-sed -i 's/^export //g' script.js
-
