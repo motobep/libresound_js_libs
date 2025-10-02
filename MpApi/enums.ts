@@ -49,6 +49,7 @@ export enum BuiltinActions {
     group_add_to_queue = 'group_add_to_queue',
     group_queue_play_next = 'group_queue_play_next',
 
+    download = 'download',
     to_artist = 'to_artist',
 }
 

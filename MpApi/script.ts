@@ -54,12 +54,14 @@ export interface ItemAction {
 export type Item = {
     id: string;
     title: string;
+    subtitle: string;
     thumbnailUrl: string;
 }
 
 export interface MusicItem extends Item {
     id: string;
     title: string;
+    subtitle: string;
     thumbnailUrl: string;
 
     artist: {
@@ -80,9 +82,9 @@ export interface MusicItem extends Item {
 export interface GroupItem extends Item {
     id: string;
     title: string;
+    subtitle: string;
     thumbnailUrl: string;
 
-    subtitle?: string;
     props?: KeyValue
 }
 
