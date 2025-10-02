@@ -41,8 +41,14 @@ export enum IconName {
 }
 
 export enum BuiltinActions {
+    clear_queue = 'clear_queue',
+
+    add_to_queue = 'add_to_queue',
+    queue_play_next = 'queue_play_next',
+
     group_add_to_queue = 'group_add_to_queue',
     group_queue_play_next = 'group_queue_play_next',
+
     to_artist = 'to_artist',
 }
 
@@ -57,3 +63,7 @@ export enum ControlsType {
     queue = 'queue',
 }
 
+export enum ItemActionsContextType {
+    source = 'source',
+    queue = 'queue',
+}

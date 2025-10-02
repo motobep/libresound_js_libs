@@ -1,5 +1,5 @@
 import { MpRuntimeClass, SendMessageType } from '../MpRuntime/script'
-import { BuiltinActions, DownloaderType, IconName, KeyValue, ListType, NavType } from './enums'
+import { BuiltinActions, DownloaderType, IconName, ItemActionsContextType, KeyValue, ListType, NavType } from './enums'
 
 declare const MpRuntime: MpRuntimeClass
 declare const sendMessage: SendMessageType
@@ -21,6 +21,7 @@ export interface MpPlugin {
     getGroupContentAsync(group: GroupItem): Promise<MusicItem[]> // to add in queue
 
     toArtistAsync(mi: MusicItem): Promise<void>
+    buildActionsAsync(contextType: ItemActionsContextType, index: number, item: Item): Promise<ActionsDescr>;
 
     back(): boolean
     canBack(): boolean
@@ -39,23 +40,27 @@ export interface OptionalEventHandlers {
 }
 
 
-export interface DialogDescr {
+export interface ActionsDescr {
     builtin: BuiltinActions[]
-    customItemActions: CustomAction[]
+    custom: ItemAction[]
+}
+
+export interface ItemAction {
+    text: string
+    icon?: IconName
+    callback: () => void
 }
 
 export type Item = {
     id: string;
     title: string;
     thumbnailUrl: string;
-    itemDialogDescr: DialogDescr
 }
 
 export interface MusicItem extends Item {
     id: string;
     title: string;
     thumbnailUrl: string;
-    itemDialogDescr: DialogDescr
 
     artist: {
         id: string;
@@ -76,7 +81,6 @@ export interface GroupItem extends Item {
     id: string;
     title: string;
     thumbnailUrl: string;
-    itemDialogDescr: DialogDescr
 
     subtitle?: string;
     props?: KeyValue
@@ -96,7 +100,7 @@ export interface SectionDescrJs {
 export interface SectionHeaderDescr {
     title?: string
     subtitle?: string
-    customAction?: CustomAction
+    actionBtn?: ActionBtnDescr
 }
 
 // TODO: Change it
@@ -104,7 +108,7 @@ export interface PageDescrJs {
     title?: string
     sectionlist: SectionDescrJs[]
     header?: PageHeaderDescr
-    actionButtonDescr?: CustomAction
+    actionBtn?: ActionBtnDescr
     props?: KeyValue
 }
 
@@ -112,11 +116,10 @@ interface PageHeaderDescr {
     title: string
     subtitle?: string
     thumbnailUrl?: string
-    itemDialogDescr?: DialogDescr
 }
 
 
-export interface CustomAction {
+export interface ActionBtnDescr {
     text: string
     icon?: IconName
     callbackName: string
@@ -129,6 +132,54 @@ export interface DownloadProps {
 
 }
 
+class FuncsManager {
+    pools = {}
+
+    makePool(name: string): FuncsPool {
+        MpRuntime.green('FuncsManager.makePool:', name)
+        try {
+            if (name in this.pools) {
+                throw new Error(`Pool "${name}" already exists`);
+            }
+            this.pools[name] = new FuncsPool()
+            return this.getPool(name)
+        } catch (e) {
+            MpRuntime.error('Err in makePool():', e)
+        }
+    }
+
+    getPool(name: string): FuncsPool {
+        return this.pools[name]
+    }
+
+    deletePool(name: string): void {
+        MpRuntime.warn('FuncsManager printing pool:', name)
+        MpRuntime.log(this.pools[name])
+        MpRuntime.log(this.pools[name].funcsMap)
+
+        delete this.pools[name]
+
+        MpRuntime.error('FuncsManager printing pool after delete:', name)
+        MpRuntime.log(this.pools[name])
+    }
+}
+
+class FuncsPool {
+    funcsMap = {}
+    counter = 0
+
+    get(name: string): void {
+        return this.funcsMap[name]
+    }
+
+    add(func: () => void): string {
+        let name = 'f_' + ++this.counter
+        MpRuntime.green('FuncsManager.add:', name)
+        this.funcsMap[name] = func
+        return name
+    }
+}
+
 export class MusicPlayerClass {
     source = new Source()
     currPageStack = new CurrPageStack()
@@ -139,6 +190,7 @@ export class MusicPlayerClass {
     errorManager = new ErrorManager()
     helpers = new Helpers()
     logger = new Logger()
+    _funcsManager = new FuncsManager()
 
     constructor() {
         MpRuntime.log('MusicPlayerClass loaded')
@@ -284,12 +336,12 @@ export class CurrPage {
         sendMessage('PS.currPage.header-set', JSON.stringify(val))
     }
 
-    get actionButtonDescr(): CustomAction {
-        return sendMessage('PS.currPage.actionButtonDescr-get', JSON.stringify({}))
+    get actionBtn(): ActionBtnDescr {
+        return sendMessage('PS.currPage.actionBtn-get', JSON.stringify({}))
     }
 
-    set actionButtonDescr(val: CustomAction) {
-        sendMessage('PS.currPage.actionButtonDescr-set', JSON.stringify(val))
+    set actionBtn(val: ActionBtnDescr) {
+        sendMessage('PS.currPage.actionBtn-set', JSON.stringify(val))
     }
 
     get props() {

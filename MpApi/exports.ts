@@ -1,4 +1,4 @@
-import { MusicPlayerClass, Item, MusicItem, GroupItem, PageDescrJs, MpPlugin, OptionalEventHandlers, DialogDescr, CustomAction } from './script'
+import { MusicPlayerClass, Item, MusicItem, GroupItem, PageDescrJs, MpPlugin, OptionalEventHandlers, ItemAction } from './script'
 import { MpRuntimeClass } from '../MpRuntime/script'
 import {
     NavType, BodyType, WrapperType, IconName,
@@ -16,8 +16,7 @@ export {
     GroupItem,
     Item,
     PageDescrJs,
-    DialogDescr,
-    CustomAction,
+    ItemAction,
 
     // Runtime
     MpRuntimeClass,
