@@ -38,19 +38,9 @@ export enum IconName {
     pencil = 'pencil',
     music_note = 'music_note',
     music_notes = 'music_notes',
-}
-
-export enum BuiltinActions {
-    clear_queue = 'clear_queue',
-
-    add_to_queue = 'add_to_queue',
-    queue_play_next = 'queue_play_next',
-
-    group_add_to_queue = 'group_add_to_queue',
-    group_queue_play_next = 'group_queue_play_next',
-
-    download = 'download',
-    to_artist = 'to_artist',
+    heart = 'heart',
+    thumbs_up = 'thumbs_up',
+    thumbs_down = 'thumbs_down',
 }
 
 export enum DownloaderType {

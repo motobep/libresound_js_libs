@@ -1,5 +1,5 @@
 import { MpRuntimeClass, SendMessageType } from '../MpRuntime/script'
-import { BuiltinActions, DownloaderType, IconName, ItemActionsContextType, KeyValue, ListType, NavType } from './enums'
+import { DownloaderType, IconName, KeyValue, ListType, NavType } from './enums'
 
 declare const MpRuntime: MpRuntimeClass
 declare const sendMessage: SendMessageType
@@ -18,10 +18,8 @@ export interface MpPlugin {
     chooseSearchTabAsync(index: number): Promise<void>
 
     chooseGroupAsync(group: GroupItem): Promise<void>
-    getGroupContentAsync(group: GroupItem): Promise<MusicItem[]> // to add in queue
 
     toArtistAsync(mi: MusicItem): Promise<void>
-    buildActionsAsync(contextType: ItemActionsContextType, index: number, item: Item): Promise<ActionsDescr>;
 
     back(): boolean
     canBack(): boolean
@@ -37,12 +35,6 @@ export interface OptionalEventHandlers {
     onOpenedPlaybackPlayPrev(obj: any): void
     onOpenedPlaybackPlayNext(obj: any): void
     onBeforeFetch(obj: any): void
-}
-
-
-export interface ActionsDescr {
-    builtin: BuiltinActions[]
-    custom: ItemAction[]
 }
 
 export interface ItemAction {
@@ -118,6 +110,7 @@ interface PageHeaderDescr {
     title: string
     subtitle?: string
     thumbnailUrl?: string
+    actionBtn?: ActionBtnDescr
 }
 
 
@@ -138,7 +131,7 @@ class FuncsManager {
     pools = {}
 
     makePool(name: string): FuncsPool {
-        MpRuntime.green('FuncsManager.makePool:', name)
+        // MpRuntime.log('FuncsManager.makePool:', name)
         try {
             if (name in this.pools) {
                 throw new Error(`Pool "${name}" already exists`);
@@ -146,7 +139,7 @@ class FuncsManager {
             this.pools[name] = new FuncsPool()
             return this.getPool(name)
         } catch (e) {
-            MpRuntime.error('Err in makePool():', e)
+            MpRuntime.error('Error in makePool():', e.message)
         }
     }
 
@@ -155,14 +148,7 @@ class FuncsManager {
     }
 
     deletePool(name: string): void {
-        MpRuntime.warn('FuncsManager printing pool:', name)
-        MpRuntime.log(this.pools[name])
-        MpRuntime.log(this.pools[name].funcsMap)
-
         delete this.pools[name]
-
-        MpRuntime.error('FuncsManager printing pool after delete:', name)
-        MpRuntime.log(this.pools[name])
     }
 }
 
@@ -170,7 +156,7 @@ class FuncsPool {
     funcsMap = {}
     counter = 0
 
-    get(name: string): void {
+    get(name: string): () => void {
         return this.funcsMap[name]
     }
 
@@ -201,6 +187,25 @@ export class MusicPlayerClass {
     getLanguage(): string {
         return sendMessage('PS.getLanguage', JSON.stringify({}));
     }
+
+    downloadMusicItemAsync(mi: MusicItem): Promise<void> {
+        return sendMessage('PS.downloadMusicItemAsync', JSON.stringify(mi));
+    }
+
+    toThisSourceAsync(): Promise<void> {
+        return sendMessage('PS.toThisSourceAsync', JSON.stringify({}));
+    }
+
+    closeActions(): void {
+        sendMessage('PS.closeActions', JSON.stringify({}));
+    }
+
+    showActionsDialog(actions: ItemAction[], tapPos: number[] | null = null): void {
+        this._actions = actions
+        sendMessage('PS.showActionsDialog', JSON.stringify({ tapPos }));
+    }
+
+    _actions: any
 
     updateAppState() {
         sendMessage('PS.updateAppState', JSON.stringify({}));
@@ -372,6 +377,9 @@ export class Queue {
     }
     removeRange(start: number, end: number): void {
         sendMessage('PS.queue.removeRange', JSON.stringify({ start: start, end: end }));
+    }
+    clear(): void {
+        sendMessage('PS.queue.clear', JSON.stringify({}));
     }
     getTrack(trackIndex: number): MusicItem {
         return sendMessage('PS.queue.getTrack', JSON.stringify(trackIndex));
