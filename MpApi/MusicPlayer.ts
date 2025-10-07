@@ -1,9 +1,10 @@
-import { MpRuntimeClass, SendMessageType } from '../MpRuntime/script'
+import { Logger } from './Logger'
+import { MpRuntimeClass, SendMessageType } from './MpRuntime'
 import { DownloaderType, IconName, KeyValue, ListType, NavType } from './enums'
 
-declare const MpRuntime: MpRuntimeClass
 declare const sendMessage: SendMessageType
 
+export const MpRuntime = new MpRuntimeClass()
 
 export interface MpPlugin {
     afterInitAsync(): Promise<void>
@@ -18,8 +19,6 @@ export interface MpPlugin {
     chooseSearchTabAsync(index: number): Promise<void>
 
     chooseGroupAsync(group: GroupItem): Promise<void>
-
-    toArtistAsync(mi: MusicItem): Promise<void>
 
     back(): boolean
     canBack(): boolean
@@ -131,7 +130,6 @@ class FuncsManager {
     pools = {}
 
     makePool(name: string): FuncsPool {
-        // MpRuntime.log('FuncsManager.makePool:', name)
         try {
             if (name in this.pools) {
                 throw new Error(`Pool "${name}" already exists`);
@@ -139,7 +137,7 @@ class FuncsManager {
             this.pools[name] = new FuncsPool()
             return this.getPool(name)
         } catch (e) {
-            MpRuntime.error('Error in makePool():', e.message)
+            this.logger.error('Error in makePool():', e.message)
         }
     }
 
@@ -150,6 +148,8 @@ class FuncsManager {
     deletePool(name: string): void {
         delete this.pools[name]
     }
+
+    logger = new Logger('📘 FuncsManager:')
 }
 
 class FuncsPool {
@@ -162,7 +162,6 @@ class FuncsPool {
 
     add(func: () => void): string {
         let name = 'f_' + ++this.counter
-        MpRuntime.green('FuncsManager.add:', name)
         this.funcsMap[name] = func
         return name
     }
@@ -177,11 +176,11 @@ export class MusicPlayerClass {
     propertyStorage = new PropertyStorage()
     errorManager = new ErrorManager()
     helpers = new Helpers()
-    logger = new Logger()
+    logger = new Logger('🔌')
     _funcsManager = new FuncsManager()
 
     constructor() {
-        MpRuntime.log('MusicPlayerClass loaded')
+        this.logger.log('MusicPlayerClass loaded')
     }
 
     getLanguage(): string {
@@ -393,6 +392,17 @@ export class Queue {
     get length(): number {
         return sendMessage('PS.queue.length-get', JSON.stringify({}));
     }
+
+    helpers = {
+        playNext: (mis: MusicItem[]) => {
+            let idx = this.currTrackIdx + 1
+            if (idx >= this.length) {
+                this.addAll(mis)
+            } else {
+                this.insertAll(idx, mis)
+            }
+        },
+    }
 }
 
 class Helpers {
@@ -443,21 +453,6 @@ export class ErrorManager {
     }
     set(err: string) {
         sendMessage('PS.errorManager.set', JSON.stringify(err));
-    }
-}
-
-export class Logger {
-    log(...args: any) {
-        console.log('🔌\x1B[35m', ...args, '\x1B[0m')
-    }
-    info(...args: any) {
-        console.log('🔌\x1B[34m', ...args, '\x1B[0m')
-    }
-    warn(...args: any) {
-        console.log('🔌\x1B[33m', ...args, '\x1B[0m')
-    }
-    error(...args: any) {
-        console.log('🔌\x1B[31m', ...args, '\x1B[0m')
     }
 }
 

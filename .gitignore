@@ -3,13 +3,14 @@
 !.gitignore
 !README.md
 !LICENSE
+
 !package.json
 !package-lock.json
-!removeExports.js
+
+!rollup.config.js
+!tsconfig.json
+!epilog.js
 
 !MpApi/
 !MpApi/*.ts
-!MpApi/tsconfig.json
 
-!MpRuntime/
-!MpRuntime/*.ts

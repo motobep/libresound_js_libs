@@ -1,3 +1,5 @@
+import { Logger } from "./Logger"
+
 export type SendMessageType = (a: string, b: string) => any
 
 declare const sendMessage: SendMessageType
@@ -11,7 +13,7 @@ export class MpRuntimeClass {
         free(id: string): void
     }
     constructor() {
-        this.log('MpRuntimeClass constructor()')
+        this.logger.log('MpRuntimeClass constructor()')
         this.downloads = {
             add(id: string, title: string) {
                 sendMessage('downloads__add', JSON.stringify({ id: id, title: title }));
@@ -92,40 +94,10 @@ export class MpRuntimeClass {
     async load_and_add_picture(path: string) {
         await sendMessage('MP_load_and_add_picture', JSON.stringify({ 'path': path }));
     }
-    log(...args: any) {
-        console.log(`${this._prefix}`, ...args)
-    }
-    green(...args: any) {
-        console.log(`${this._colorMap['green']}${this._prefix}`, ...args, `\x1B[0m`)
-    }
-    blue(...args: any) {
-        console.log(`${this._colorMap['blue']}${this._prefix}`, ...args, `\x1B[0m`)
-    }
-    warn(...args: any) {
-        console.log(`${this._colorMap['yellow']}${this._prefix}`, ...args, `\x1B[0m`)
-    }
-    error(...args: any) {
-        console.log(`${this._colorMap['red']}${this._prefix}`, ...args, `\x1B[0m`)
-    }
-
-    _prefix = '📘 MP:'
-    _colorMap = {
-        'black': '\x1B[30m',
-        'red': '\x1B[31m',
-        'green': '\x1B[32m',
-        'yellow': '\x1B[33m',
-        'blue': '\x1B[34m',
-        'magenta': '\x1B[35m',
-        'cyan': '\x1B[36m',
-        'white': '\x1B[37m',
-        'reset': '\x1B[0m',
-        '': '',
-    };
+    logger = new Logger('📘 MpRuntime:')
 };
 
 async function MP_unit8ListToString(list: number[]): Promise<string> {
     // console.log('unit8ListToString')
     return await sendMessage('MP_unit8ListToString', JSON.stringify(list));
 }
-
-const MpRuntime = new MpRuntimeClass()
