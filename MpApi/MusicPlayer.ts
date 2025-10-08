@@ -20,6 +20,9 @@ export interface MpPlugin {
 
     chooseGroupAsync(group: GroupItem): Promise<void>
 
+    buildActionsAsync(indexedItem: IndexedItem, sectionIndex: number): Promise<ItemAction[]>
+    buildMultiActionsAsync(indexedItemsMap: { [key: string]: IndexedItem[] }): Promise<ItemAction[]>
+
     back(): boolean
     canBack(): boolean
 
@@ -47,6 +50,11 @@ export type Item = {
     title: string;
     subtitle: string;
     thumbnailUrl: string;
+}
+
+export type IndexedItem = {
+    index: number;
+    item: Item;
 }
 
 export interface MusicItem extends Item {
