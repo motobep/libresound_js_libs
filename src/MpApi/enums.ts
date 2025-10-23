@@ -1,5 +1,3 @@
-export type KeyValue = { [key: string]: any }
-
 export enum NavType {
     tabs = 'tabs',
     searchTabs = 'searchTabs',

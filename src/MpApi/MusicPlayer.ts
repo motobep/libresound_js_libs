@@ -1,6 +1,9 @@
+import { z } from 'zod';
+
 import { Logger } from './Logger'
 import { MpRuntimeClass, SendMessageType } from './MpRuntime'
-import { DownloaderType, IconName, KeyValue, ListType, NavType } from './enums'
+import { ListType, NavType } from './enums'
+import { ActionBtnDescr, DownloadProps, GroupItem, IndexedItem, Item, ItemAction, KeyValue, MusicItem, PageDescrJs, PageHeaderDescr, sActionBtnDescr, SectionDescrJs, sItem, sItemAction, sKeyValue, sMusicItem, sNavType, sPageDescrJs, sPageHeaderDescr, sSectionDescrJs } from './types'
 
 declare const sendMessage: SendMessageType
 
@@ -39,105 +42,11 @@ export interface OptionalEventHandlers {
     onBeforeFetch(obj: any): void
 }
 
-export interface ItemAction {
-    text: string
-    icon?: IconName
-    callback: () => void
-}
-
-export type Item = {
-    id: string;
-    title: string;
-    subtitle: string;
-    thumbnailUrl: string;
-}
-
-export type IndexedItem = {
-    index: number;
-    item: Item;
-}
-
-export interface MusicItem extends Item {
-    id: string;
-    title: string;
-    subtitle: string;
-    thumbnailUrl: string;
-
-    artist: {
-        id: string;
-        title: string;
-    };
-    album: {
-        id: string;
-        title: string;
-    };
-    duration: number; // int
-
-    downloaderType: DownloaderType;
-    extension: string;
-    // Add props?
-}
-
-export interface GroupItem extends Item {
-    id: string;
-    title: string;
-    subtitle: string;
-    thumbnailUrl: string;
-
-    props?: KeyValue
-}
-
-export interface SectionDescrJs {
-    header?: SectionHeaderDescr
-
-    listType: ListType
-    itemlist: Item[]
-    isBigTile?: boolean
-    rowsCount: number
-
-    props?: KeyValue
-}
-
-export interface SectionHeaderDescr {
-    title?: string
-    subtitle?: string
-    actionBtn?: ActionBtnDescr
-}
-
-// TODO: Change it
-export interface PageDescrJs {
-    title?: string
-    sectionlist: SectionDescrJs[]
-    header?: PageHeaderDescr
-    actionBtn?: ActionBtnDescr
-    props?: KeyValue
-}
-
-interface PageHeaderDescr {
-    title: string
-    subtitle?: string
-    thumbnailUrl?: string
-    actionBtn?: ActionBtnDescr
-}
-
-
-export interface ActionBtnDescr {
-    text: string
-    icon?: IconName
-    callbackName: string
-    callbackArgs: string[]
-}
-
-export interface DownloadProps {
-    id: string,
-    onDataReceived: (recieved: number, contentLength: number) => void
-
-}
-
 class FuncsManager {
     pools = {}
 
     makePool(name: string): FuncsPool {
+        z.string().parse(name)
         try {
             if (name in this.pools) {
                 throw new Error(`Pool "${name}" already exists`);
@@ -150,10 +59,13 @@ class FuncsManager {
     }
 
     getPool(name: string): FuncsPool {
+        z.string().parse(name)
+        z.string().parse(name)
         return this.pools[name]
     }
 
     deletePool(name: string): void {
+        z.string().parse(name)
         delete this.pools[name]
     }
 
@@ -165,6 +77,7 @@ class FuncsPool {
     counter = 0
 
     get(name: string): () => void {
+        z.string().parse(name)
         return this.funcsMap[name]
     }
 
@@ -185,6 +98,8 @@ export class MusicPlayerClass {
     errorManager = new ErrorManager()
     helpers = new Helpers()
     logger = new Logger('🔌')
+
+    runtime = MpRuntime
     _funcsManager = new FuncsManager()
 
     constructor() {
@@ -196,6 +111,7 @@ export class MusicPlayerClass {
     }
 
     downloadMusicItemAsync(mi: MusicItem): Promise<void> {
+        sMusicItem.parse(mi)
         return sendMessage('PS.downloadMusicItemAsync', JSON.stringify(mi));
     }
 
@@ -208,6 +124,8 @@ export class MusicPlayerClass {
     }
 
     showActionsDialog(actions: ItemAction[], tapPos: number[] | null = null): void {
+        z.array(sItemAction).parse(actions)
+        z.nullable(z.array(z.number()))
         this._actions = actions
         sendMessage('PS.showActionsDialog', JSON.stringify({ tapPos }));
     }
@@ -233,6 +151,7 @@ class Source {
     initPageStacks(map: {
         [name: string]: PageDescrJs[]
     }): void {
+        z.record(z.string(), z.array(sPageDescrJs)).parse(map)
         sendMessage('PS.initPageStacks', JSON.stringify(map));
     }
 
@@ -240,6 +159,7 @@ class Source {
         return sendMessage('PS.currPageStackName-get', JSON.stringify({}));
     }
     set currPageStackName(name: string) {
+        z.string().parse(name)
         sendMessage('PS.currPageStackName-set', JSON.stringify(name));
     }
 
@@ -247,18 +167,14 @@ class Source {
         return sendMessage('PS.currTabIdx-get', JSON.stringify({}));
     }
     set currTabIdx(index: number) {
-        assertType(index, 'number')
+        z.number().nonnegative().parse(index)
         sendMessage('PS.currTabIdx-set', JSON.stringify(index));
     }
     getTabs(): string[][] {
         return sendMessage('PS.getTabs', JSON.stringify({}));
     }
     setTabs(arr: string[][]): void {
-        if (arr.length > 0) {
-            assertType(arr[0], 'object')
-            assertType(arr[0][0], 'string')
-            // assertType(arr[0][1], 'string')
-        }
+        z.array(z.array(z.string())).parse(arr)
         sendMessage('PS.setTabs', JSON.stringify(arr));
     }
 
@@ -266,13 +182,14 @@ class Source {
         return sendMessage('PS.currSearchTabIdx-get', JSON.stringify({}));
     }
     set currSearchTabIdx(index: number) {
-        assertType(index, 'number')
+        z.number().nonnegative().parse(index)
         sendMessage('PS.currSearchTabIdx-set', JSON.stringify(index));
     }
     getSearchTabs(): string[] {
         return sendMessage('PS.getSearchTabs', JSON.stringify({}));
     }
     setSearchTabs(arr: string[]): void {
+        z.array(z.string()).parse(arr)
         sendMessage('PS.setSearchTabs', JSON.stringify(arr));
     }
 
@@ -280,6 +197,7 @@ class Source {
         return sendMessage('PS.navType-get', JSON.stringify({}));
     }
     set navType(navType: NavType) {
+        sNavType.parse(navType)
         sendMessage('PS.navType-set', JSON.stringify(navType));
     }
 
@@ -287,6 +205,7 @@ class Source {
         return sendMessage('PS.isShowSearch-get', JSON.stringify({}));
     }
     set isShowSearch(isShow: boolean) {
+        z.boolean().parse(isShow)
         sendMessage('PS.isShowSearch-set', JSON.stringify(isShow));
     }
 
@@ -294,6 +213,7 @@ class Source {
         return sendMessage('PS.rightControls-set', JSON.stringify({}));
     }
     set rightControls(controls: string[]) {
+        z.array(z.string()).parse(controls)
         sendMessage('PS.rightControls-set', JSON.stringify(controls));
     }
 
@@ -302,6 +222,8 @@ class Source {
     }
 
     async updateThumbnailFromUrlAsync(id: string, url: string): Promise<boolean> {
+        z.string().parse(id)
+        z.string().parse(url)
         return await sendMessage('PS.updateThumbnailFromUrlAsync',
             JSON.stringify({ id: id, url: url }));
     }
@@ -309,6 +231,7 @@ class Source {
 
 class CurrPageStack {
     setLast(pageDescr: PageDescrJs) {
+        sPageDescrJs.parse(pageDescr)
         sendMessage('PS.currPageStack.setLast', JSON.stringify(pageDescr));
     }
     get length(): number {
@@ -318,6 +241,7 @@ class CurrPageStack {
         return sendMessage('PS.currPageStack.last-get', JSON.stringify({}));
     }
     push(pageDescr: PageDescrJs) {
+        sPageDescrJs.parse(pageDescr)
         sendMessage('PS.currPageStack.push', JSON.stringify(pageDescr));
     }
     pop(): boolean {
@@ -331,6 +255,7 @@ export class CurrPage {
     }
 
     set title(str: string) {
+        z.string().parse(str)
         sendMessage('PS.currPage.title.set', JSON.stringify(str));
     }
 
@@ -339,6 +264,7 @@ export class CurrPage {
     }
 
     set sectionlist(val: SectionDescrJs[]) {
+        z.array(sSectionDescrJs).parse(val)
         sendMessage('PS.currPage.sectionlist-set', JSON.stringify(val))
     }
 
@@ -347,6 +273,7 @@ export class CurrPage {
     }
 
     set header(val: PageHeaderDescr) {
+        sPageHeaderDescr.parse(val)
         sendMessage('PS.currPage.header-set', JSON.stringify(val))
     }
 
@@ -355,6 +282,7 @@ export class CurrPage {
     }
 
     set actionBtn(val: ActionBtnDescr) {
+        sActionBtnDescr.parse(val)
         sendMessage('PS.currPage.actionBtn-set', JSON.stringify(val))
     }
 
@@ -363,6 +291,7 @@ export class CurrPage {
     }
 
     set props(props: KeyValue) {
+        sKeyValue.parse(props)
         sendMessage('PS.currPage.props-set', JSON.stringify(props));
     }
 }
@@ -370,31 +299,38 @@ export class CurrPage {
 
 export class Playback {
     playByIdx(index: number): void {
+        z.number().nonnegative().parse(index)
         sendMessage('PS.playback.playByIdx', JSON.stringify(index));
     }
 }
 
 export class Queue {
     insertAll(index: number, list: MusicItem[]): void {
-        console.log('queue', index, list)
+        z.number().nonnegative().parse(index)
+        z.array(sMusicItem).parse(list)
         sendMessage('PS.queue.insertAll', JSON.stringify({ index: index, list: list }));
     }
     addAll(list: MusicItem[]): void {
+        z.array(sMusicItem).parse(list)
         sendMessage('PS.queue.addAll', JSON.stringify(list));
     }
     removeRange(start: number, end: number): void {
+        z.number().nonnegative().parse(start)
+        z.number().nonnegative().parse(end)
         sendMessage('PS.queue.removeRange', JSON.stringify({ start: start, end: end }));
     }
     clear(): void {
         sendMessage('PS.queue.clear', JSON.stringify({}));
     }
-    getTrack(trackIndex: number): MusicItem {
-        return sendMessage('PS.queue.getTrack', JSON.stringify(trackIndex));
+    getTrack(index: number): MusicItem {
+        z.number().nonnegative().parse(index)
+        return sendMessage('PS.queue.getTrack', JSON.stringify(index));
     }
     get currTrackIdx(): number {
         return sendMessage('PS.queue.currTrackIdx-get', JSON.stringify({}));
     }
     set currTrackIdx(index: number) {
+        z.number().nonnegative().parse(index)
         sendMessage('PS.queue.currTrackIdx-set', JSON.stringify(index));
     }
     get length(): number {
@@ -403,6 +339,7 @@ export class Queue {
 
     helpers = {
         playNext: (mis: MusicItem[]) => {
+            z.array(sMusicItem).parse(mis)
             let idx = this.currTrackIdx + 1
             if (idx >= this.length) {
                 this.addAll(mis)
@@ -415,6 +352,7 @@ export class Queue {
 
 class Helpers {
     makeTracklist(itemlist: Item[]) {
+        z.array(sItem).parse(itemlist)
         return {
             listType: 'tracklist' as ListType,
             itemlist: itemlist,
@@ -423,6 +361,7 @@ class Helpers {
     }
 
     makeGrouplist(itemlist: Item[]) {
+        z.array(sItem).parse(itemlist)
         return {
             listType: 'grouplist' as ListType,
             itemlist: itemlist,
@@ -431,9 +370,13 @@ class Helpers {
     }
 
     defaultDownloadProps(downloadId: string, name: string): DownloadProps {
+        z.string().parse(downloadId)
+        z.string().parse(name)
         return {
             id: downloadId,
             onDataReceived: (recieved: number, contentLength: number) => {
+                z.number().nonnegative().parse(recieved)
+                z.number().nonnegative().parse(contentLength)
                 MpRuntime.downloads.update(downloadId,
                     `[${(recieved / contentLength * 100).toFixed(2)} %.]. Downloading "${name}"`
                 );
@@ -445,12 +388,15 @@ class Helpers {
 // TODO: divide in PropertyStorage and Settings(Storage)
 export class PropertyStorage {
     get(name: string) {
+        z.string().parse(name)
         return sendMessage('PS.propertyStorage.get', JSON.stringify(name));
     }
     set(name: string, value: any) {
+        z.string().parse(name)
         sendMessage('PS.propertyStorage.set', JSON.stringify({ 'name': name, 'value': value }));
     }
     setList(list: string[]) {
+        z.array(z.string()).parse(list)
         sendMessage('PS.propertyStorage.setList', JSON.stringify(list));
     }
 }
@@ -460,18 +406,10 @@ export class ErrorManager {
         return sendMessage('PS.errorManager.get', JSON.stringify({}));
     }
     set(err: string) {
+        z.string(err)
         sendMessage('PS.errorManager.set', JSON.stringify(err));
     }
 }
 
-function assert(condition: boolean, message?: string) {
-    if (!condition) {
-        throw new Error(message || "Assertion failed");
-    }
-}
-
-function assertType(val: any, type: string) {
-    assert(typeof val === type, `Assert type "${type}". Got "${typeof val}"`)
-}
-
 export const MusicPlayer = new MusicPlayerClass()
+

@@ -1,3 +1,4 @@
+import { resolveSourceMap } from './resolveSourceMap'
 import { Logger } from "./Logger"
 
 export type SendMessageType = (a: string, b: string) => any
@@ -94,8 +95,65 @@ export class MpRuntimeClass {
     async load_and_add_picture(path: string) {
         await sendMessage('MP_load_and_add_picture', JSON.stringify({ 'path': path }));
     }
+    fs = new Fs()
     logger = new Logger('📘 MpRuntime:')
+
+    resolveSourceMap = resolveSourceMap
+
+    modifyTraces(str: string,
+        getASource: (s: string) => any, getBSource: (s: string) => any,
+        aName: string, bName: string) {
+        var arr = str.split('\n')
+        var traces = []
+        for (var s of arr) {
+            var new_str = s
+            var o = this._getTrace(s)
+            if (o !== null) {
+                let variants = []
+
+                let a = getASource(o.line)
+                if (a) {
+                    variants.push(`${aName}:'${a.source}':${a.line}`)
+                }
+                let b = getBSource(o.line)
+                if (b) {
+                    variants.push(`${bName}:'${b.source}':${b.line}`)
+                }
+                if (variants.length > 0) {
+                    new_str += ` [${variants.join(' or ')}]`
+                }
+            }
+            traces.push(new_str)
+        }
+        return traces
+    }
+
+    _getTrace(s: string) {
+        const regex = /at .*\((<.*>):(\d+):(\d+)\)/;
+        const match = s.match(regex);
+        if (match && match.length === 4) {
+            return {
+                line: match[2],
+                col: match[3],
+                source: match[1],
+            }
+        }
+        return null
+    }
 };
+
+class Fs {
+    async readFile(path: string,
+        options: { encoding: string, flag: string } | string = ''): Promise<string> {
+        return await sendMessage('MpRuntime.fs.readFile',
+            JSON.stringify({ 'path': path, 'options': options }));
+    }
+
+    async mpReadAsset(path: string): Promise<string> {
+        return await sendMessage('MpRuntime.fs.mpReadAsset',
+            JSON.stringify({ 'path': path }));
+    }
+}
 
 async function MP_unit8ListToString(list: number[]): Promise<string> {
     // console.log('unit8ListToString')

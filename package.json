@@ -33,5 +33,11 @@
     "rollup-plugin-polyfill-node": "^0.13.0",
     "tslib": "^2.8.1",
     "typescript": "^5.9.2"
+  },
+  "dependencies": {
+    "@jridgewell/sourcemap-codec": "^1.5.5",
+    "text-encoding-shim": "^1.0.5",
+    "whatwg-url": "^15.1.0",
+    "zod": "^4.1.12"
   }
 }
