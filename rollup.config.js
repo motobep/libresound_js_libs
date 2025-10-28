@@ -44,7 +44,7 @@ const MpRuntime = MpApi.MpRuntime`
             copyPlugin(`${dist_dir}/${filename}.js.map`, `${TARGET_DIR}/${filename}.js.map`),
         ],
     },
-    {
+    /* {
         input: src_dir + '/URL.ts',
         output: [
             {
@@ -60,8 +60,8 @@ const URL = __URL.URL`
             commonjs(), json(), resolve(), typescript(), nodePolyfills(),
             copyPlugin(`${dist_dir}/URL.js`, `${TARGET_DIR}/URL.js`),
         ],
-    },
-    {
+    }, */
+    /* {
         input: src_dir + '/TextEncoderDecoder.ts',
         output: [
             {
@@ -78,6 +78,6 @@ const TextDecoder = __TextEncoderDecoder.TextDecoder`
             commonjs(), json(), resolve(), typescript(), nodePolyfills(),
             copyPlugin(`${dist_dir}/TextEncoderDecoder.js`, `${TARGET_DIR}/TextEncoderDecoder.js`),
         ],
-    },
+    }, */
 ];
 

@@ -119,3 +119,67 @@ export const sPageDescrJs = z.object({
     props: sKeyValue.optional()
 });
 export type PageDescrJs = z.infer<typeof sPageDescrJs>
+
+
+
+export const sTextInput = z.object({
+    id: z.string(),
+    type: z.enum(['textInput']),
+    initial: z.string().nullish(),
+    hintText: z.string().nullish(),
+    label: z.string().optional(),
+    onChanged: z.function({ input: [z.string()], output: z.void() }).nullish(),
+    maxWidth: z.number().nonnegative().nullish(),
+});
+export type TextInput = z.infer<typeof sTextInput>
+
+export const sSelectInput = z.object({
+    id: z.string(),
+    type: z.enum(['selectInput']),
+    initial: z.string(),
+    elements: z.array(z.tuple([z.string(), z.string()])),
+    onChanged: z.function({ input: [z.string()], output: z.void() }).nullish(),
+});
+export type SelectInput = z.infer<typeof sSelectInput>
+
+export const sRadioGroupInput = z.object({
+    id: z.string(),
+    type: z.enum(['radioGroupInput']),
+    initial: z.string(),
+    elements: z.array(z.tuple([z.string(), z.string()])),
+    onChanged: z.function({ input: [z.string()], output: z.void() }).nullish(),
+});
+export type RadioGroupInput = z.infer<typeof sRadioGroupInput>
+
+export const sCheckboxInput = z.object({
+    id: z.string(),
+    type: z.enum(['checkboxInput', 'switchInput']),
+    initial: z.boolean(),
+    text: z.string().nullish(),
+    onChanged: z.function({ input: [z.boolean()], output: z.void() }).nullish(),
+});
+export type CheckboxInput = z.infer<typeof sCheckboxInput>
+
+
+export const sInput = z.union([
+    sTextInput, sSelectInput, sRadioGroupInput, sCheckboxInput])
+
+export type Input = z.infer<typeof sInput>
+
+
+export const sText = z.object({
+    type: z.enum(['text']),
+    text: z.string(),
+    fontSize: z.number().nonnegative().nullish(),
+});
+export type Text = z.infer<typeof sText>
+
+export const sSpace = z.object({
+    type: z.enum(['space']),
+    height: z.number().nonnegative().nullish(),
+    width: z.number().nonnegative().nullish(),
+});
+export type Space = z.infer<typeof sSpace>
+
+export const sControl = z.union([sInput, sText, sSpace])
+export type Control = z.infer<typeof sControl>

@@ -3,7 +3,7 @@ import { z } from 'zod';
 import { Logger } from './Logger'
 import { MpRuntimeClass, SendMessageType } from './MpRuntime'
 import { ListType, NavType } from './enums'
-import { ActionBtnDescr, DownloadProps, GroupItem, IndexedItem, Item, ItemAction, KeyValue, MusicItem, PageDescrJs, PageHeaderDescr, sActionBtnDescr, SectionDescrJs, sItem, sItemAction, sKeyValue, sMusicItem, sNavType, sPageDescrJs, sPageHeaderDescr, sSectionDescrJs } from './types'
+import { ActionBtnDescr, Control, DownloadProps, GroupItem, IndexedItem, Input, Item, ItemAction, KeyValue, MusicItem, PageDescrJs, PageHeaderDescr, sActionBtnDescr, sControl, SectionDescrJs, sInput, sItem, sItemAction, sKeyValue, sMusicItem, sNavType, sPageDescrJs, sPageHeaderDescr, sSectionDescrJs } from './types'
 
 declare const sendMessage: SendMessageType
 
@@ -40,6 +40,14 @@ export interface OptionalEventHandlers {
     onOpenedPlaybackPlayPrev(obj: any): void
     onOpenedPlaybackPlayNext(obj: any): void
     onBeforeFetch(obj: any): void
+
+}
+
+export interface Settings {
+    settings: {
+        onOpen(): void
+        onClose(): void
+    }
 }
 
 class FuncsManager {
@@ -47,24 +55,22 @@ class FuncsManager {
 
     makePool(name: string): FuncsPool {
         z.string().parse(name)
-        try {
-            if (name in this.pools) {
-                throw new Error(`Pool "${name}" already exists`);
-            }
-            this.pools[name] = new FuncsPool()
-            return this.getPool(name)
-        } catch (e) {
-            this.logger.error('Error in makePool():', e.message)
+        if (name in this.pools) {
+            let errMsg = `Pool "${name}" already exists`
+            this.logger.error('Error in makePool():', errMsg)
+            throw new Error(errMsg);
         }
+        this.pools[name] = new FuncsPool()
+        return this.getPool(name)
     }
 
     getPool(name: string): FuncsPool {
-        z.string().parse(name)
         z.string().parse(name)
         return this.pools[name]
     }
 
     deletePool(name: string): void {
+        this.logger.blue('delete pool', name)
         z.string().parse(name)
         delete this.pools[name]
     }
@@ -81,10 +87,15 @@ class FuncsPool {
         return this.funcsMap[name]
     }
 
-    add(func: () => void): string {
-        let name = 'f_' + ++this.counter
+    add(func: (...args: any[]) => void): string {
+        let name = '__f_' + ++this.counter
         this.funcsMap[name] = func
         return name
+    }
+
+    addWithId(func: (...args: any[]) => void, id: string): string {
+        this.funcsMap[id] = func
+        return id
     }
 }
 
@@ -98,6 +109,31 @@ export class MusicPlayerClass {
     errorManager = new ErrorManager()
     helpers = new Helpers()
     logger = new Logger('🔌')
+    settings = {
+        logger: new Logger('🔌settings'),
+        setControls(controls: Control[]) {
+            z.array(sControl).parse(controls)
+            let ids = []
+            for (let el of controls) {
+                if (!('id' in el)) continue;
+
+                if (ids.includes(el.id)) {
+                    this.logger.error(`Duplicate id for:`, el)
+                    throw Error(`Duplicate id: ${el.id}`)
+                }
+                ids.push(el.id)
+            }
+
+            var pool = MusicPlayer._funcsManager.getPool('controlsPool');
+            for (let el of controls) {
+                if ('onChanged' in el) {
+                    pool.addWithId(el.onChanged, el.id)
+                }
+            }
+
+            sendMessage('PS.settings.setControls', JSON.stringify(controls));
+        },
+    }
 
     runtime = MpRuntime
     _funcsManager = new FuncsManager()
@@ -385,19 +421,14 @@ class Helpers {
     }
 }
 
-// TODO: divide in PropertyStorage and Settings(Storage)
 export class PropertyStorage {
-    get(name: string) {
+    get(name: string): any {
         z.string().parse(name)
         return sendMessage('PS.propertyStorage.get', JSON.stringify(name));
     }
     set(name: string, value: any) {
         z.string().parse(name)
         sendMessage('PS.propertyStorage.set', JSON.stringify({ 'name': name, 'value': value }));
-    }
-    setList(list: string[]) {
-        z.array(z.string()).parse(list)
-        sendMessage('PS.propertyStorage.setList', JSON.stringify(list));
     }
 }
 
