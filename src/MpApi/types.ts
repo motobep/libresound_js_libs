@@ -111,16 +111,6 @@ export const sSectionDescrJs = z.object({
 });
 export type SectionDescrJs = z.infer<typeof sSectionDescrJs>
 
-export const sPageDescrJs = z.object({
-    title: z.string().optional(),
-    sectionlist: z.array(sSectionDescrJs),
-    header: sPageHeaderDescr.optional(),
-    actionBtn: sActionBtnDescr.optional(),
-    props: sKeyValue.optional()
-});
-export type PageDescrJs = z.infer<typeof sPageDescrJs>
-
-
 
 export const sTextInput = z.object({
     id: z.string(),
@@ -183,3 +173,32 @@ export type Space = z.infer<typeof sSpace>
 
 export const sControl = z.union([sInput, sText, sSpace])
 export type Control = z.infer<typeof sControl>
+
+
+export const sMusicPageDescr = z.object({
+    type: z.enum(['music']),
+    title: z.string().optional(),
+    sectionlist: z.array(sSectionDescrJs),
+    header: sPageHeaderDescr.optional(),
+    actionBtn: sActionBtnDescr.optional(),
+    props: sKeyValue.optional()
+});
+export type MusicPageDescr = z.infer<typeof sMusicPageDescr>
+
+export const sControlsPageDescr = z.object({
+    type: z.enum(['controls']),
+    controls: z.array(sControl),
+    props: sKeyValue.optional()
+});
+export type ControlsPageDescr = z.infer<typeof sControlsPageDescr>
+
+export const sPageDescr = z.union([sMusicPageDescr, sControlsPageDescr])
+export type PageDescr = z.infer<typeof sPageDescr>
+
+
+export const sMusicPageDescrUntyped = sMusicPageDescr.omit({ 'type': true })
+export type MusicPageDescrUntyped = z.infer<typeof sMusicPageDescrUntyped>
+
+
+export const sControlsPageDescrUntyped = sControlsPageDescr.omit({ 'type': true })
+export type ControlsPageDescrUntyped = z.infer<typeof sControlsPageDescrUntyped>

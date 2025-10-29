@@ -3,7 +3,7 @@ import { z } from 'zod';
 import { Logger } from './Logger'
 import { MpRuntimeClass, SendMessageType } from './MpRuntime'
 import { ListType, NavType } from './enums'
-import { ActionBtnDescr, Control, DownloadProps, GroupItem, IndexedItem, Input, Item, ItemAction, KeyValue, MusicItem, PageDescrJs, PageHeaderDescr, sActionBtnDescr, sControl, SectionDescrJs, sInput, sItem, sItemAction, sKeyValue, sMusicItem, sNavType, sPageDescrJs, sPageHeaderDescr, sSectionDescrJs } from './types'
+import { ActionBtnDescr, Control, DownloadProps, GroupItem, IndexedItem, Item, ItemAction, KeyValue, MusicItem, PageHeaderDescr, sActionBtnDescr, sControl, SectionDescrJs, sItem, sItemAction, sKeyValue, sMusicItem, sNavType, sPageHeaderDescr, sSectionDescrJs, MusicPageDescr, ControlsPageDescr, sMusicPageDescrUntyped, MusicPageDescrUntyped, ControlsPageDescrUntyped, sControlsPageDescrUntyped, PageDescr, sPageDescr } from './types'
 
 declare const sendMessage: SendMessageType
 
@@ -60,17 +60,27 @@ class FuncsManager {
             this.logger.error('Error in makePool():', errMsg)
             throw new Error(errMsg);
         }
+        this.logger.log('make pool', name)
         this.pools[name] = new FuncsPool()
         return this.getPool(name)
     }
 
     getPool(name: string): FuncsPool {
+        if (!(name in this.pools)) {
+            let errMsg = `Pool "${name}" doesn't exist`
+            this.logger.error('Error in getPool():', errMsg)
+            throw new Error(errMsg);
+        }
         z.string().parse(name)
         return this.pools[name]
     }
 
+    contains(name: string): boolean {
+        return name in this.pools
+    }
+
     deletePool(name: string): void {
-        this.logger.blue('delete pool', name)
+        this.logger.log('delete pool', name)
         z.string().parse(name)
         delete this.pools[name]
     }
@@ -99,10 +109,24 @@ class FuncsPool {
     }
 }
 
+function _checkControls(controls: Control[]) {
+    let ids = []
+    for (let el of controls) {
+        if (!('id' in el)) continue;
+
+        if (ids.includes(el.id)) {
+            MusicPlayer.logger.error(`Duplicate id for:`, el)
+            throw Error(`Duplicate id: ${el.id}`)
+        }
+        ids.push(el.id)
+    }
+}
+
+
 export class MusicPlayerClass {
     source = new Source()
     currPageStack = new CurrPageStack()
-    currPage = new CurrPage()
+    currMusicPage = new CurrMusicPage()
     playback = new Playback()
     queue = new Queue()
     propertyStorage = new PropertyStorage()
@@ -113,23 +137,14 @@ export class MusicPlayerClass {
         logger: new Logger('🔌settings'),
         setControls(controls: Control[]) {
             z.array(sControl).parse(controls)
-            let ids = []
-            for (let el of controls) {
-                if (!('id' in el)) continue;
+            _checkControls(controls)
 
-                if (ids.includes(el.id)) {
-                    this.logger.error(`Duplicate id for:`, el)
-                    throw Error(`Duplicate id: ${el.id}`)
-                }
-                ids.push(el.id)
+            const controlsPool = 'controlsPool'
+            if (MusicPlayer._funcsManager.contains(controlsPool)) {
+                MusicPlayer._funcsManager.deletePool(controlsPool);
             }
-
-            var pool = MusicPlayer._funcsManager.getPool('controlsPool');
-            for (let el of controls) {
-                if ('onChanged' in el) {
-                    pool.addWithId(el.onChanged, el.id)
-                }
-            }
+            MusicPlayer._funcsManager.makePool(controlsPool);
+            _addControlsToPool(controls, controlsPool)
 
             sendMessage('PS.settings.setControls', JSON.stringify(controls));
         },
@@ -185,9 +200,22 @@ export class MusicPlayerClass {
 
 class Source {
     initPageStacks(map: {
-        [name: string]: PageDescrJs[]
+        [name: string]: PageDescr[]
     }): void {
-        z.record(z.string(), z.array(sPageDescrJs)).parse(map)
+        z.record(z.string(), z.array(sPageDescr)).parse(map)
+
+        for (let name in map) {
+            let stack = map[name]
+            for (let i in stack) {
+                let page = stack[i]
+                if (page.type === 'controls') {
+                    let currPageId = `${name}.${i}`
+                    MusicPlayer._funcsManager.makePool(currPageId);
+                    _addControlsToPool(page.controls, currPageId)
+                }
+            }
+        }
+
         sendMessage('PS.initPageStacks', JSON.stringify(map));
     }
 
@@ -266,60 +294,91 @@ class Source {
 }
 
 class CurrPageStack {
-    setLast(pageDescr: PageDescrJs) {
-        sPageDescrJs.parse(pageDescr)
-        sendMessage('PS.currPageStack.setLast', JSON.stringify(pageDescr));
-    }
     get length(): number {
         return sendMessage('PS.currPageStack.length-get', JSON.stringify({}));
     }
-    get last(): PageDescrJs {
+    get last(): PageDescr {
         return sendMessage('PS.currPageStack.last-get', JSON.stringify({}));
     }
-    push(pageDescr: PageDescrJs) {
-        sPageDescrJs.parse(pageDescr)
+    setLast(pageDescr: PageDescr) {
+        sPageDescr.parse(pageDescr)
+        MusicPlayer.logger.log('setLast')
+
+        if (_getCurrPageType() === 'controls') {
+            MusicPlayer._funcsManager.deletePool(_getCurrPageId());
+        }
+
+        sendMessage('PS.currPageStack.setLast', JSON.stringify(pageDescr));
+
+        if (_getCurrPageType() === 'controls') {
+            let currPageId = _getCurrPageId()
+            MusicPlayer._funcsManager.makePool(currPageId);
+            _addControlsToPool((pageDescr as ControlsPageDescr).controls, currPageId)
+        }
+    }
+    push(pageDescr: PageDescr) {
+        sPageDescr.parse(pageDescr)
+        MusicPlayer.logger.log('push')
+
         sendMessage('PS.currPageStack.push', JSON.stringify(pageDescr));
+
+        if (_getCurrPageType() === 'controls') {
+            let currPageId = _getCurrPageId()
+            MusicPlayer._funcsManager.makePool(currPageId);
+            _addControlsToPool((pageDescr as ControlsPageDescr).controls, currPageId)
+        }
     }
     pop(): boolean {
+        if (_getCurrPageType() === 'controls') {
+            MusicPlayer._funcsManager.deletePool(_getCurrPageId());
+        }
+
         return sendMessage('PS.currPageStack.pop', JSON.stringify({}));
     }
 }
 
-export class CurrPage {
+function _getCurrPageId(): string {
+    return sendMessage('PS.currPageId', JSON.stringify({}));
+}
+function _getCurrPageType(): string {
+    return sendMessage('PS.currPage.type', JSON.stringify({}));
+}
+
+export class CurrMusicPage {
     get title() {
-        return sendMessage('PS.currPage.title-get', JSON.stringify({}));
+        return sendMessage('PS.currMusicPage.title-get', JSON.stringify({}));
     }
 
     set title(str: string) {
         z.string().parse(str)
-        sendMessage('PS.currPage.title.set', JSON.stringify(str));
+        sendMessage('PS.currMusicPage.title.set', JSON.stringify(str));
     }
 
     get sectionlist(): SectionDescrJs[] {
-        return sendMessage('PS.currPage.sectionlist-get', JSON.stringify({}))
+        return sendMessage('PS.currMusicPage.sectionlist-get', JSON.stringify({}))
     }
 
     set sectionlist(val: SectionDescrJs[]) {
         z.array(sSectionDescrJs).parse(val)
-        sendMessage('PS.currPage.sectionlist-set', JSON.stringify(val))
+        sendMessage('PS.currMusicPage.sectionlist-set', JSON.stringify(val))
     }
 
     get header(): PageHeaderDescr {
-        return sendMessage('PS.currPage.header-get', JSON.stringify({}))
+        return sendMessage('PS.currMusicPage.header-get', JSON.stringify({}))
     }
 
     set header(val: PageHeaderDescr) {
         sPageHeaderDescr.parse(val)
-        sendMessage('PS.currPage.header-set', JSON.stringify(val))
+        sendMessage('PS.currMusicPage.header-set', JSON.stringify(val))
     }
 
     get actionBtn(): ActionBtnDescr {
-        return sendMessage('PS.currPage.actionBtn-get', JSON.stringify({}))
+        return sendMessage('PS.currMusicPage.actionBtn-get', JSON.stringify({}))
     }
 
     set actionBtn(val: ActionBtnDescr) {
         sActionBtnDescr.parse(val)
-        sendMessage('PS.currPage.actionBtn-set', JSON.stringify(val))
+        sendMessage('PS.currMusicPage.actionBtn-set', JSON.stringify(val))
     }
 
     get props() {
@@ -443,4 +502,24 @@ export class ErrorManager {
 }
 
 export const MusicPlayer = new MusicPlayerClass()
+
+export function MusicPage(obj: MusicPageDescrUntyped): MusicPageDescr {
+    sMusicPageDescrUntyped.parse(obj)
+    return Object.assign({ type: 'music' }, obj) as MusicPageDescr
+}
+
+export function ControlsPage(obj: ControlsPageDescrUntyped): ControlsPageDescr {
+    sControlsPageDescrUntyped.parse(obj)
+    return Object.assign({ type: 'controls' }, obj) as ControlsPageDescr
+}
+
+function _addControlsToPool(controls: Control[], poolName: string) {
+    MusicPlayer.logger.log('_addControlsToPool')
+    var pool = MusicPlayer._funcsManager.getPool(poolName);
+    for (let el of controls) {
+        if ('onChanged' in el) {
+            pool.addWithId(el.onChanged, el.id)
+        }
+    }
+}
 
