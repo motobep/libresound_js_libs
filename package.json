@@ -1,6 +1,6 @@
 {
   "name": "libresound_js_libs",
-  "version": "0.2.0",
+  "version": "0.2.1",
   "main": "index.js",
   "type": "module",
   "scripts": {
@@ -16,6 +16,15 @@
     "libresound",
     "API",
     "javascript"
+  ],
+  "files": [
+    "README.md",
+    "LICENSE",
+    "package.json",
+    "package-lock.json",
+    "rollup.config.js",
+    "tsconfig.json",
+    "src/MpApi/"
   ],
   "author": "motobep",
   "license": "MIT",
