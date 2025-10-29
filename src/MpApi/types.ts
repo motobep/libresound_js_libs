@@ -50,11 +50,11 @@ export const sMusicItem = sItem.extend({
     subtitle: z.string(),
     thumbnailUrl: z.string(),
     artist: z.object({
-        id: z.string(),
+        id: z.string().nullish(),
         title: z.string()
     }),
     album: z.object({
-        id: z.string(),
+        id: z.string().nullish(),
         title: z.string()
     }),
     duration: z.number(),
