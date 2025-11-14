@@ -5,6 +5,15 @@ export type SendMessageType = (a: string, b: string) => any
 
 declare const sendMessage: SendMessageType
 
+type SourceMapTrace = {
+    at: string,
+    fileDst: string,
+    lineDst: number,
+    fileSrc?: string,
+    lineSrc?: number,
+    col: 0,
+}
+
 export class MpRuntimeClass {
     downloads: {
         add(id: string, title: string): void
@@ -14,7 +23,7 @@ export class MpRuntimeClass {
         free(id: string): void
     }
     constructor() {
-        this.logger.log('MpRuntimeClass constructor()')
+        // this.logger.log('MpRuntimeClass constructor()')
         this.downloads = {
             add(id: string, title: string) {
                 sendMessage('downloads__add', JSON.stringify({ id: id, title: title }));
@@ -100,42 +109,67 @@ export class MpRuntimeClass {
 
     resolveSourceMap = resolveSourceMap
 
-    modifyTraces(str: string,
-        getASource: (s: string) => any, getBSource: (s: string) => any,
-        aName: string, bName: string) {
+    async mapStacktraceAsync(stacktrace: string) {
+        let traces = this._getTraces(stacktrace)
+        return await this._modifyTraces(traces)
+    }
+
+    async _modifyTraces(traces: (string | SourceMapTrace)[]): Promise<string> {
+        let stacktrace = ''
+        for (var el of traces) {
+            if (typeof el === 'string') {
+                stacktrace += el + '\n'
+                continue
+            }
+            let t: SourceMapTrace = el
+
+            const mapPath = t.fileDst + '.map'
+            const fs = this.fs;
+            if (fs.existsSync(mapPath)) {
+                let pluginSourceMap: string
+                if (mapPath.startsWith('assets/libresound_js_libs')) {
+                    pluginSourceMap = await fs.mpReadAsset(mapPath);
+                } else {
+                    pluginSourceMap = fs.readFileSync(mapPath, 'utf8');
+                }
+                let res = this.resolveSourceMap(pluginSourceMap, t.lineDst)
+                if (res !== null) {
+                    t = { ...t, ...res }
+                }
+            }
+            stacktrace += this._traceToStr(t) + '\n'
+        }
+        return stacktrace
+    }
+
+    _traceToStr(t: SourceMapTrace) {
+        let srcStr = t.fileSrc ? ` [${t.fileSrc}:${t.lineSrc}]` : ''
+        return `    at ${t.at} (${t.fileDst}:${t.lineDst})${srcStr}`
+    }
+
+    _getTraces(str: string): (string | SourceMapTrace)[] {
         var arr = str.split('\n')
         var traces = []
         for (var s of arr) {
-            var new_str = s
+            var trace: string | Object = s
             var o = this._getTrace(s)
             if (o !== null) {
-                let variants = []
-
-                let a = getASource(o.line)
-                if (a) {
-                    variants.push(`${aName}:'${a.source}':${a.line}`)
-                }
-                let b = getBSource(o.line)
-                if (b) {
-                    variants.push(`${bName}:'${b.source}':${b.line}`)
-                }
-                if (variants.length > 0) {
-                    new_str += ` [${variants.join(' or ')}]`
-                }
+                trace = o
             }
-            traces.push(new_str)
+            traces.push(trace)
         }
         return traces
     }
 
     _getTrace(s: string) {
-        const regex = /at .*\((<.*>):(\d+):(\d+)\)/;
+        const regex = /at ([\p{Letter}<>\w]*) \(([\p{Letter}<>\w/\\\.]*):(\d+)/u
         const match = s.match(regex);
         if (match && match.length === 4) {
             return {
-                line: match[2],
-                col: match[3],
-                source: match[1],
+                at: match[1],
+                fileDst: match[2],
+                lineDst: parseInt(match[3]),
+                col: 0,
             }
         }
         return null
@@ -146,6 +180,17 @@ class Fs {
     async readFile(path: string,
         options: { encoding: string, flag: string } | string = ''): Promise<string> {
         return await sendMessage('MpRuntime.fs.readFile',
+            JSON.stringify({ 'path': path, 'options': options }));
+    }
+
+    existsSync(path: string): boolean {
+        return sendMessage('MpRuntime.fs.existsSync',
+            JSON.stringify({ 'path': path }));
+    }
+
+    readFileSync(path: string,
+        options: { encoding: string, flag: string } | string = ''): string {
+        return sendMessage('MpRuntime.fs.readFileSync',
             JSON.stringify({ 'path': path, 'options': options }));
     }
 

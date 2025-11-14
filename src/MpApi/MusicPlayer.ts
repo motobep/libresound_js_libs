@@ -154,7 +154,7 @@ export class MusicPlayerClass {
     _funcsManager = new FuncsManager()
 
     constructor() {
-        this.logger.log('MusicPlayerClass loaded')
+        // this.logger.log('MusicPlayerClass loaded')
     }
 
     getLanguage(): string {
@@ -263,6 +263,14 @@ class Source {
     set navType(navType: NavType) {
         sNavType.parse(navType)
         sendMessage('PS.navType-set', JSON.stringify(navType));
+    }
+
+    get isShowPreloader() {
+        return sendMessage('PS.isShowPreloader-get', JSON.stringify({}));
+    }
+    set isShowPreloader(isShow: boolean) {
+        z.boolean().parse(isShow)
+        sendMessage('PS.isShowPreloader-set', JSON.stringify(isShow));
     }
 
     get isShowSearch() {

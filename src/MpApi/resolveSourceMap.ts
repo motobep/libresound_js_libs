@@ -1,6 +1,9 @@
 import { decode } from '@jridgewell/sourcemap-codec';
 
-export function resolveSourceMap(str: string, line: number) {
+export function resolveSourceMap(str: string, line: number): {
+    fileSrc: string,
+    lineSrc: number,
+} | null {
     try {
         var mapJson = JSON.parse(str)
         const decodedMap = decode(mapJson.mappings);
@@ -11,8 +14,8 @@ export function resolveSourceMap(str: string, line: number) {
         }
         var file = mapJson.sources[lineObj.source]
         return {
-            source: file,
-            line: lineObj.line
+            fileSrc: file,
+            lineSrc: lineObj.line
         }
     } catch (err) {
         return null
