@@ -1,136 +1,23 @@
 import { z } from 'zod';
 
-import { Logger } from './Logger'
-import { MpRuntimeClass, SendMessageType } from './MpRuntime'
 import { ListType, NavType } from './enums'
-import { ActionBtnDescr, Control, DownloadProps, GroupItem, IndexedItem, Item, ItemAction, KeyValue, MusicItem, PageHeaderDescr, sActionBtnDescr, sControl, SectionDescrJs, sItem, sItemAction, sKeyValue, sMusicItem, sNavType, sPageHeaderDescr, sSectionDescrJs, MusicPageDescr, ControlsPageDescr, sMusicPageDescrUntyped, MusicPageDescrUntyped, ControlsPageDescrUntyped, sControlsPageDescrUntyped, PageDescr, sPageDescr } from './types'
-
-declare const sendMessage: SendMessageType
-
-export const MpRuntime = new MpRuntimeClass()
-
-export interface MpPlugin {
-    afterInitAsync(): Promise<void>
-    reloadAsync(): Promise<void>
-
-    chooseSourceAsync(): Promise<void>
-
-    getSuggestionsAsync(text: string): Promise<string[]>
-    searchAsync(text: string): Promise<void>
-
-    chooseTabAsync(index: number): Promise<void>
-    chooseSearchTabAsync(index: number): Promise<void>
-
-    chooseGroupAsync(group: GroupItem): Promise<void>
-
-    buildActionsAsync(indexedItem: IndexedItem, sectionIndex: number): Promise<ItemAction[]>
-    buildMultiActionsAsync(indexedItemsMap: { [key: string]: IndexedItem[] }): Promise<ItemAction[]>
-
-    back(): boolean
-    canBack(): boolean
-
-    fetchBytesAsync(mi: MusicItem, downloadId: string): Promise<number[]>
-    fetchUrlAsync(mi: MusicItem, downloadId: string): Promise<String>
-
-    onSourceSettingsClick(): void
-}
-
-export interface OptionalEventHandlers {
-    onPlaybackControlsOpen(obj: any): void
-    onOpenedPlaybackPlayPrev(obj: any): void
-    onOpenedPlaybackPlayNext(obj: any): void
-    onBeforeFetch(obj: any): void
-
-}
-
-export interface Settings {
-    settings: {
-        onOpen(): void
-        onClose(): void
-    }
-}
-
-class FuncsManager {
-    pools = {}
-
-    makePool(name: string): FuncsPool {
-        z.string().parse(name)
-        if (name in this.pools) {
-            let errMsg = `Pool "${name}" already exists`
-            this.logger.error('Error in makePool():', errMsg)
-            throw new Error(errMsg);
-        }
-        this.logger.log('make pool', name)
-        this.pools[name] = new FuncsPool()
-        return this.getPool(name)
-    }
-
-    getPool(name: string): FuncsPool {
-        if (!(name in this.pools)) {
-            let errMsg = `Pool "${name}" doesn't exist`
-            this.logger.error('Error in getPool():', errMsg)
-            throw new Error(errMsg);
-        }
-        z.string().parse(name)
-        return this.pools[name]
-    }
-
-    contains(name: string): boolean {
-        return name in this.pools
-    }
-
-    deletePool(name: string): void {
-        this.logger.log('delete pool', name)
-        z.string().parse(name)
-        delete this.pools[name]
-    }
-
-    logger = new Logger('📘 FuncsManager:')
-}
-
-class FuncsPool {
-    funcsMap = {}
-    counter = 0
-
-    get(name: string): () => void {
-        z.string().parse(name)
-        return this.funcsMap[name]
-    }
-
-    add(func: (...args: any[]) => void): string {
-        let name = '__f_' + ++this.counter
-        this.funcsMap[name] = func
-        return name
-    }
-
-    addWithId(func: (...args: any[]) => void, id: string): string {
-        this.funcsMap[id] = func
-        return id
-    }
-}
-
-function _checkControls(controls: Control[]) {
-    let ids = []
-    for (let el of controls) {
-        if (!('id' in el)) continue;
-
-        if (ids.includes(el.id)) {
-            MusicPlayer.logger.error(`Duplicate id for:`, el)
-            throw Error(`Duplicate id: ${el.id}`)
-        }
-        ids.push(el.id)
-    }
-}
+import { ActionBtnDescr, Control, DownloadProps, Item, ItemAction, KeyValue, MusicItem, PageHeaderDescr, sActionBtnDescr, sControl, SectionDescr, sItem, sItemAction, sKeyValue, sMusicItem, sNavType, sPageHeaderDescr, sSectionDescr, MusicPageDescr, ControlsPageDescr, sMusicPageDescrUntyped, MusicPageDescrUntyped, ControlsPageDescrUntyped, sControlsPageDescrUntyped, PageDescr, sPageDescr } from './types'
+import { downloader } from './Downloader';
+import { Runtime, sendMessage } from './Runtime'
+import { FuncsManager } from './internal/FuncsManager';
+import { Logger } from './Logger'
 
 
+/**
+ * The class to interact with the app
+ */
 export class MusicPlayerClass {
+    runtime = new Runtime()
     source = new Source()
-    currPageStack = new CurrPageStack()
-    currMusicPage = new CurrMusicPage()
     playback = new Playback()
     queue = new Queue()
+    downloader = downloader
     propertyStorage = new PropertyStorage()
-    errorManager = new ErrorManager()
     helpers = new Helpers()
     logger = new Logger('🔌')
     settings = {
@@ -150,13 +37,11 @@ export class MusicPlayerClass {
         },
     }
 
-    runtime = MpRuntime
     _funcsManager = new FuncsManager()
 
-    constructor() {
-        // this.logger.log('MusicPlayerClass loaded')
-    }
-
+    /**
+     * Get currently used language
+     */
     getLanguage(): string {
         return sendMessage('PS.getLanguage', JSON.stringify({}));
     }
@@ -166,14 +51,16 @@ export class MusicPlayerClass {
         return sendMessage('PS.downloadMusicItemAsync', JSON.stringify(mi));
     }
 
+    /**
+     * Opens this plugin's source
+     */
     toThisSourceAsync(): Promise<void> {
         return sendMessage('PS.toThisSourceAsync', JSON.stringify({}));
     }
 
-    closeActions(): void {
-        sendMessage('PS.closeActions', JSON.stringify({}));
-    }
-
+    /**
+     * Shows actions dialog
+     */
     showActionsDialog(actions: ItemAction[], tapPos: number[] | null = null): void {
         z.array(sItemAction).parse(actions)
         z.nullable(z.array(z.number()))
@@ -181,24 +68,32 @@ export class MusicPlayerClass {
         sendMessage('PS.showActionsDialog', JSON.stringify({ tapPos }));
     }
 
+    /**
+     * Closes actions dialog
+     */
+    closeActionsDialog(): void {
+        sendMessage('PS.closeActionsDialog', JSON.stringify({}));
+    }
+
     _actions: any
 
+    /**
+     * Updates app state.
+     * Use this method to update UI after changing app state.
+     */
     updateAppState() {
         sendMessage('PS.updateAppState', JSON.stringify({}));
     }
-
-    fetch = (...args: any) => {
-        // @ts-ignore
-        return MpRuntime.fetch(...args)
-    }
-
-    download = (...args: any) => {
-        // @ts-ignore
-        return MpRuntime.download(...args)
-    }
 }
 
-class Source {
+/**
+ * App's Source
+ */
+export class Source {
+    currPageStack = new CurrPageStack()
+    currMusicPage = new CurrMusicPage()
+    errorManager = new ErrorManager()
+
     initPageStacks(map: {
         [name: string]: PageDescr[]
     }): void {
@@ -281,17 +176,13 @@ class Source {
         sendMessage('PS.isShowSearch-set', JSON.stringify(isShow));
     }
 
-    get rightControls() {
+    /* get rightControls() {
         return sendMessage('PS.rightControls-set', JSON.stringify({}));
     }
     set rightControls(controls: string[]) {
         z.array(z.string()).parse(controls)
         sendMessage('PS.rightControls-set', JSON.stringify(controls));
-    }
-
-    openPluginSettingsPage(): void {
-        sendMessage('PS.openPluginSettingsPage', JSON.stringify({}));
-    }
+    } */
 
     async updateThumbnailFromUrlAsync(id: string, url: string): Promise<boolean> {
         z.string().parse(id)
@@ -301,7 +192,10 @@ class Source {
     }
 }
 
-class CurrPageStack {
+/**
+ * Current Page Stack.
+ */
+export class CurrPageStack {
     get length(): number {
         return sendMessage('PS.currPageStack.length-get', JSON.stringify({}));
     }
@@ -352,6 +246,10 @@ function _getCurrPageType(): string {
     return sendMessage('PS.currPage.type', JSON.stringify({}));
 }
 
+/**
+ * Current Music Page.
+ * Don't use it if current page is not a Music Page
+ */
 export class CurrMusicPage {
     get title() {
         return sendMessage('PS.currMusicPage.title-get', JSON.stringify({}));
@@ -362,12 +260,12 @@ export class CurrMusicPage {
         sendMessage('PS.currMusicPage.title.set', JSON.stringify(str));
     }
 
-    get sectionlist(): SectionDescrJs[] {
+    get sectionlist(): SectionDescr[] {
         return sendMessage('PS.currMusicPage.sectionlist-get', JSON.stringify({}))
     }
 
-    set sectionlist(val: SectionDescrJs[]) {
-        z.array(sSectionDescrJs).parse(val)
+    set sectionlist(val: SectionDescr[]) {
+        z.array(sSectionDescr).parse(val)
         sendMessage('PS.currMusicPage.sectionlist-set', JSON.stringify(val))
     }
 
@@ -399,48 +297,89 @@ export class CurrMusicPage {
     }
 }
 
-
+/**
+ * App's Playback
+ */
 export class Playback {
+    /**
+     * Play track by [index] from Queue
+     */
     playByIdx(index: number): void {
         z.number().nonnegative().parse(index)
         sendMessage('PS.playback.playByIdx', JSON.stringify(index));
     }
 }
 
+/**
+ * App's Queue
+ */
 export class Queue {
+    /**
+     * Inserts [list] at [index] in the queue
+     */
     insertAll(index: number, list: MusicItem[]): void {
         z.number().nonnegative().parse(index)
         z.array(sMusicItem).parse(list)
         sendMessage('PS.queue.insertAll', JSON.stringify({ index: index, list: list }));
     }
+    /**
+     * Adds [list] at the end of the queue
+     */
     addAll(list: MusicItem[]): void {
         z.array(sMusicItem).parse(list)
         sendMessage('PS.queue.addAll', JSON.stringify(list));
     }
+    /**
+     * Removes a range of elements from the queue.
+     * Removes the elements with positions greater than or equal to [start]
+     * and less than [end], from the queue.
+    */
     removeRange(start: number, end: number): void {
         z.number().nonnegative().parse(start)
         z.number().nonnegative().parse(end)
         sendMessage('PS.queue.removeRange', JSON.stringify({ start: start, end: end }));
     }
+    /**
+     * Removes items before and after the current track.
+     * Only this track will remain
+     */
     clear(): void {
         sendMessage('PS.queue.clear', JSON.stringify({}));
     }
+    /**
+     * Returns [MusicItem] by [index] from the queue
+     */
     getTrack(index: number): MusicItem {
         z.number().nonnegative().parse(index)
         return sendMessage('PS.queue.getTrack', JSON.stringify(index));
     }
+    /**
+     * Index of current track
+     */
     get currTrackIdx(): number {
         return sendMessage('PS.queue.currTrackIdx-get', JSON.stringify({}));
     }
+    /**
+     * Set index of current track
+     */
     set currTrackIdx(index: number) {
         z.number().nonnegative().parse(index)
         sendMessage('PS.queue.currTrackIdx-set', JSON.stringify(index));
     }
+    /**
+     * Queue's length
+     */
     get length(): number {
         return sendMessage('PS.queue.length-get', JSON.stringify({}));
     }
 
+    /**
+     * Queue's helpers
+     */
     helpers = {
+        /**
+         * Inserts [MusicItem] after current track
+         */
         playNext: (mis: MusicItem[]) => {
             z.array(sMusicItem).parse(mis)
             let idx = this.currTrackIdx + 1
@@ -453,7 +392,48 @@ export class Queue {
     }
 }
 
-class Helpers {
+/**
+ * Store and access any data as json in long-term memory
+ */
+export class PropertyStorage {
+    get(name: string): any {
+        z.string().parse(name)
+        return sendMessage('PS.propertyStorage.get', JSON.stringify(name));
+    }
+    set(name: string, value: any) {
+        z.string().parse(name)
+        sendMessage('PS.propertyStorage.set', JSON.stringify({ 'name': name, 'value': value }));
+    }
+}
+
+export class ErrorManager {
+    /**
+     * Get current error message
+     */
+    get(): string {
+        return sendMessage('PS.errorManager.get', JSON.stringify({}));
+    }
+    /**
+     * Set error message that will be show instead of content.
+     * Use empty string to clean error message
+     */
+    set(err: string) {
+        z.string(err)
+        sendMessage('PS.errorManager.set', JSON.stringify(err));
+    }
+}
+
+export class Helpers {
+    MusicPage(obj: MusicPageDescrUntyped): MusicPageDescr {
+        sMusicPageDescrUntyped.parse(obj)
+        return Object.assign({ type: 'music' }, obj) as MusicPageDescr
+    }
+
+    ControlsPage(obj: ControlsPageDescrUntyped): ControlsPageDescr {
+        sControlsPageDescrUntyped.parse(obj)
+        return Object.assign({ type: 'controls' }, obj) as ControlsPageDescr
+    }
+
     makeTracklist(itemlist: Item[]) {
         z.array(sItem).parse(itemlist)
         return {
@@ -480,7 +460,7 @@ class Helpers {
             onDataReceived: (recieved: number, contentLength: number) => {
                 z.number().nonnegative().parse(recieved)
                 z.number().nonnegative().parse(contentLength)
-                MpRuntime.downloads.update(downloadId,
+                downloader.update(downloadId,
                     `[${(recieved / contentLength * 100).toFixed(2)} %.]. Downloading "${name}"`
                 );
             }
@@ -488,37 +468,20 @@ class Helpers {
     }
 }
 
-export class PropertyStorage {
-    get(name: string): any {
-        z.string().parse(name)
-        return sendMessage('PS.propertyStorage.get', JSON.stringify(name));
-    }
-    set(name: string, value: any) {
-        z.string().parse(name)
-        sendMessage('PS.propertyStorage.set', JSON.stringify({ 'name': name, 'value': value }));
-    }
-}
-
-export class ErrorManager {
-    get(): string {
-        return sendMessage('PS.errorManager.get', JSON.stringify({}));
-    }
-    set(err: string) {
-        z.string(err)
-        sendMessage('PS.errorManager.set', JSON.stringify(err));
-    }
-}
-
 export const MusicPlayer = new MusicPlayerClass()
 
-export function MusicPage(obj: MusicPageDescrUntyped): MusicPageDescr {
-    sMusicPageDescrUntyped.parse(obj)
-    return Object.assign({ type: 'music' }, obj) as MusicPageDescr
-}
 
-export function ControlsPage(obj: ControlsPageDescrUntyped): ControlsPageDescr {
-    sControlsPageDescrUntyped.parse(obj)
-    return Object.assign({ type: 'controls' }, obj) as ControlsPageDescr
+function _checkControls(controls: Control[]) {
+    let ids = []
+    for (let el of controls) {
+        if (!('id' in el)) continue;
+
+        if (ids.includes(el.id)) {
+            MusicPlayer.logger.error(`Duplicate id for:`, el)
+            throw Error(`Duplicate id: ${el.id}`)
+        }
+        ids.push(el.id)
+    }
 }
 
 function _addControlsToPool(controls: Control[], poolName: string) {
@@ -530,4 +493,3 @@ function _addControlsToPool(controls: Control[], poolName: string) {
         }
     }
 }
-

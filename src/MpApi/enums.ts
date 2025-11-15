@@ -14,12 +14,6 @@ export enum ListType {
     grouplist = 'grouplist',
 }
 
-export enum WrapperType {
-    playlist = 'playlist',
-    playlists = 'playlists',
-    none = 'none',
-}
-
 export enum IconName {
     plus = 'plus',
     chevron_right = 'chevron_right',
@@ -44,15 +38,4 @@ export enum IconName {
 export enum DownloaderType {
     bytes = 'DownloaderType.bytes',
     url = 'DownloaderType.url',
-}
-
-export enum ControlsType {
-    search = 'search',
-    settings = 'settings',
-    queue = 'queue',
-}
-
-export enum ItemActionsContextType {
-    source = 'source',
-    queue = 'queue',
 }

@@ -6,7 +6,8 @@
   "scripts": {
     "watch": "rollup -c -w",
     "build": "rollup -c",
-    "clean": "rm -r dist"
+    "clean": "rm -r dist",
+    "doc": "npx typedoc --plugin 'typedoc-material-theme' --customCss './src/style.css' src/MpApi/*.ts"
   },
   "repository": {
     "type": "git",
@@ -41,6 +42,8 @@
     "dotenv": "^17.2.1",
     "rollup-plugin-polyfill-node": "^0.13.0",
     "tslib": "^2.8.1",
+    "typedoc": "^0.28.14",
+    "typedoc-material-theme": "^1.4.1",
     "typescript": "^5.9.2"
   },
   "dependencies": {
