@@ -1,9 +1,11 @@
 import fs from 'fs'
+import path from 'path'
 
 import resolve from '@rollup/plugin-node-resolve';
 import commonjs from '@rollup/plugin-commonjs';
 import json from '@rollup/plugin-json';
 import typescript from '@rollup/plugin-typescript'
+import alias from '@rollup/plugin-alias';
 import nodePolyfills from 'rollup-plugin-polyfill-node';
 import 'dotenv/config'
 
@@ -35,10 +37,15 @@ export default [
                 sourcemap: true,
                 footer: `
 const MusicPlayer = MpApi.MusicPlayer
-const MpRuntime = MpApi.MpRuntime`
+`
             },
         ],
         plugins: [
+            alias({
+                entries: [
+                    { find: '@MpApi', replacement: path.resolve('./src/MpApi') },
+                ],
+            }),
             commonjs(), json(), resolve(), typescript(), nodePolyfills(),
             copyPlugin(`${dist_dir}/${filename}.js`, `${TARGET_DIR}/${filename}.js`),
             copyPlugin(`${dist_dir}/${filename}.js.map`, `${TARGET_DIR}/${filename}.js.map`),

@@ -1,4 +1,5 @@
-import { sendMessage } from './Runtime'
+import { SendMessageType } from '@MpApi/Runtime'
+export declare const sendMessage: SendMessageType
 
 export class Fs {
     async readFile(path: string,

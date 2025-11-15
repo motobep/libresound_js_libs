@@ -35,6 +35,7 @@
   "homepage": "https://github.com/motobep/libresound_js_libs#readme",
   "description": "",
   "devDependencies": {
+    "@rollup/plugin-alias": "^6.0.0",
     "@rollup/plugin-commonjs": "^28.0.2",
     "@rollup/plugin-json": "^6.1.0",
     "@rollup/plugin-node-resolve": "^16.0.0",

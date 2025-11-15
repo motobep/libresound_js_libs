@@ -39,3 +39,7 @@ export enum DownloaderType {
     bytes = 'DownloaderType.bytes',
     url = 'DownloaderType.url',
 }
+
+export enum RightControlsType {
+    search = 'search',
+}

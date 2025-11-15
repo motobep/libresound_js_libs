@@ -1,12 +1,14 @@
 import { z } from 'zod';
 
-import { ListType, NavType } from './enums'
+import { ListType, NavType, RightControlsType } from './enums'
 import { ActionBtnDescr, Control, DownloadProps, Item, ItemAction, KeyValue, MusicItem, PageHeaderDescr, sActionBtnDescr, sControl, SectionDescr, sItem, sItemAction, sKeyValue, sMusicItem, sNavType, sPageHeaderDescr, sSectionDescr, MusicPageDescr, ControlsPageDescr, sMusicPageDescrUntyped, MusicPageDescrUntyped, ControlsPageDescrUntyped, sControlsPageDescrUntyped, PageDescr, sPageDescr } from './types'
 import { downloader } from './Downloader';
-import { Runtime, sendMessage } from './Runtime'
+import { Runtime, SendMessageType } from './Runtime'
 import { FuncsManager } from './internal/FuncsManager';
 import { Logger } from './Logger'
 
+
+export declare const sendMessage: SendMessageType
 
 /**
  * The class to interact with the app
@@ -176,13 +178,13 @@ export class Source {
         sendMessage('PS.isShowSearch-set', JSON.stringify(isShow));
     }
 
-    /* get rightControls() {
+    get rightControls() {
         return sendMessage('PS.rightControls-set', JSON.stringify({}));
     }
-    set rightControls(controls: string[]) {
+    set rightControls(controls: RightControlsType[]) {
         z.array(z.string()).parse(controls)
         sendMessage('PS.rightControls-set', JSON.stringify(controls));
-    } */
+    }
 
     async updateThumbnailFromUrlAsync(id: string, url: string): Promise<boolean> {
         z.string().parse(id)
