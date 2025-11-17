@@ -1,13 +1,15 @@
 {
   "name": "libresound_js_libs",
-  "version": "0.2.1",
+  "version": "0.3.0",
   "main": "index.js",
   "type": "module",
   "scripts": {
     "watch": "rollup -c -w",
     "build": "rollup -c",
     "clean": "rm -r dist",
-    "doc": "npx typedoc --plugin 'typedoc-material-theme' --customCss './src/style.css' src/MpApi/*.ts"
+    "build_doc": "npx typedoc --plugin 'typedoc-material-theme' --customCss './src/style.css' --out documentation --favicon $LS_PLUGINS_REPO/public/images/favicon.png src/MpApi/*.ts",
+    "copy_doc": "cp -r documentation $LS_PLUGINS_REPO/public/",
+    "doc": "npm run build_doc && npm run copy_doc"
   },
   "repository": {
     "type": "git",
