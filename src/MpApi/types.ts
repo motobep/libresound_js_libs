@@ -21,7 +21,7 @@ export type ItemAction = z.infer<typeof sItemAction>
 export const sItem = z.object({
     id: z.string(),
     title: z.string(),
-    subtitle: z.string(),
+    subtitle: z.string().optional(),
     thumbnailUrl: z.string()
 });
 export type Item = z.infer<typeof sItem>
@@ -35,7 +35,7 @@ export type IndexedItem = z.infer<typeof sIndexedItem>
 export const sMusicItem = sItem.extend({
     id: z.string(),
     title: z.string(),
-    subtitle: z.string(),
+    subtitle: z.string().optional(),
     thumbnailUrl: z.string(),
     artist: z.object({
         id: z.string().nullish(),
@@ -54,7 +54,7 @@ export type MusicItem = z.infer<typeof sMusicItem>
 export const sGroupItem = sItem.extend({
     id: z.string(),
     title: z.string(),
-    subtitle: z.string(),
+    subtitle: z.string().optional(),
     thumbnailUrl: z.string(),
     props: sKeyValue.optional()
 });

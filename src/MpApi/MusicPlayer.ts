@@ -1,7 +1,7 @@
 import { z } from 'zod';
 
 import { ListType, NavType, RightControlsType } from './enums'
-import { ActionBtnDescr, Control, DownloadProps, Item, ItemAction, KeyValue, MusicItem, PageHeaderDescr, sActionBtnDescr, sControl, SectionDescr, sItem, sItemAction, sKeyValue, sMusicItem, sNavType, sPageHeaderDescr, sSectionDescr, MusicPageDescr, ControlsPageDescr, sMusicPageDescrUntyped, MusicPageDescrUntyped, ControlsPageDescrUntyped, sControlsPageDescrUntyped, PageDescr, sPageDescr } from './types'
+import { ActionBtnDescr, Control, DownloadProps, Item, ItemAction, KeyValue, MusicItem, PageHeaderDescr, sActionBtnDescr, sControl, SectionDescr, sItem, sItemAction, sKeyValue, sMusicItem, sNavType, sPageHeaderDescr, sSectionDescr, MusicPageDescr, ControlsPageDescr, sMusicPageDescrUntyped, MusicPageDescrUntyped, ControlsPageDescrUntyped, sControlsPageDescrUntyped, PageDescr, sPageDescr, GroupItem } from './types'
 import { downloader } from './Downloader';
 import { Runtime, SendMessageType } from './Runtime'
 import { FuncsManager } from './internal/FuncsManager';
@@ -436,7 +436,7 @@ export class Helpers {
         return Object.assign({ type: 'controls' }, obj) as ControlsPageDescr
     }
 
-    makeTracklist(itemlist: Item[]) {
+    makeTracklist(itemlist: MusicItem[]) {
         z.array(sItem).parse(itemlist)
         return {
             listType: 'tracklist' as ListType,
@@ -445,7 +445,7 @@ export class Helpers {
         };
     }
 
-    makeGrouplist(itemlist: Item[]) {
+    makeGrouplist(itemlist: GroupItem[]) {
         z.array(sItem).parse(itemlist)
         return {
             listType: 'grouplist' as ListType,

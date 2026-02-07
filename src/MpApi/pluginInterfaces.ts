@@ -74,11 +74,11 @@ export interface SourcePlugin {
  * Optional events
  */
 export interface OptionalEventHandlers {
-    onPlaybackControlsOpen(obj: any): void
-    onOpenedPlaybackPlayPrev(obj: any): void
-    onOpenedPlaybackPlayNext(obj: any): void
-    onBeforeFetch(obj: any): void
-    onTapArtistTitle(args: any): void
+    onPlaybackControlsOpen?(obj: any): void
+    onOpenedPlaybackPlayPrev?(obj: any): void
+    onOpenedPlaybackPlayNext?(obj: any): void
+    onBeforeFetch?(obj: any): void
+    onTapArtistTitle?(args: any): void
 }
 
 /**

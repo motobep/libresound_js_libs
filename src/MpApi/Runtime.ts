@@ -1,20 +1,73 @@
 import { Fs } from "@MpApi/Fs";
 import { Logger } from "@MpApi/Logger"
 import { Mapper } from "@MpApi/internal/Mapper";
+import { PropertyStorage } from "./MusicPlayer";
 
 export type SendMessageType = (a: string, b: string) => any
 export declare const sendMessage: SendMessageType
 
+
+export class SessionStorage {
+    map = {}
+    get(name: string): any {
+        return this.map[name]
+    }
+    set(name: string, value: any) {
+        this.map[name] = value
+    }
+}
+
+function responseToRequestCookies(responseCookies: string[]) {
+    return responseCookies.map(header => {
+        const parts = header.split(';');
+        return parts[0];
+    });
+}
 
 /**
  * A class that not only implments (imitates) parts of browser/nodejs API
  */
 export class Runtime {
     fs = new Fs()
+    sessionStorage = new SessionStorage()
 
-    async fetch(url: string, options = {}) {
-        // MP.log('MP.fetch options:', options)
+    async fetch(url: string | URL, options = {}) {
+        this.logger.log('fetch url:', url)
+        let isRequest = url instanceof Request
+        if (isRequest) {
+            // skip
+        } else {
+            url = '' + url
+        }
+
+        // TODO: refactor
+        let cookieHeaderStr = options['headers']?.cookie
+        let getCookie = this.sessionStorage.get('response-cookies')
+        if (getCookie) {
+            const cookieHeaders = responseToRequestCookies(getCookie)
+            if (cookieHeaderStr) {
+                cookieHeaderStr += '; ' + cookieHeaders.join('; ')
+            } else {
+                cookieHeaderStr = cookieHeaders.join('; ')
+            }
+        }
+        if (options['headers'] === undefined) {
+            options['headers'] = {}
+        }
+        options['headers'].cookie = cookieHeaderStr
+
         let resp = await sendMessage('MP_fetch', JSON.stringify({ 'url': url, 'options': options }));
+
+        // TODO: refactor
+        let setCookie = resp.cookies
+        if (setCookie) {
+            let cookies = setCookie
+            let getCookie = this.sessionStorage.get('response-cookies')
+            if (getCookie) {
+                cookies = [...getCookie, ...setCookie]
+            }
+            this.sessionStorage.set('response-cookies', cookies)
+        }
         return this._makeResp(resp);
     }
 
@@ -46,6 +99,7 @@ export class Runtime {
                 has: (n: string) => n.toLowerCase() in headers
             },
         };
+        // this.logger.log('response', response)
         return response;
     }
 
@@ -73,7 +127,7 @@ export class Runtime {
         sendMessage('setProxyEnvironment', JSON.stringify({ proxy_environment: env }));
     }
 
-    logger = new Logger('📘 Runtime:')
+    logger = new Logger('[JS Runtime]:')
 
     _mapper = new Mapper()
 };

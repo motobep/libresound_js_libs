@@ -1,1 +1,1 @@
-export { URL } from 'whatwg-url'
+export { URL, URLSearchParams } from 'whatwg-url'

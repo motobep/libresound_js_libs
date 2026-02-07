@@ -21,6 +21,7 @@ export class Logger {
         this.logGeneral(args, 'red')
     }
     logGeneral(args: any[], color: string) {
+        // TODO: Use app's logger
         console.log(`${this._colorMap[color]}${this.prefix}`, ...args, `\x1B[0m`)
     }
 

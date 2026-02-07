@@ -16,6 +16,44 @@ const dist_dir = './dist'
 
 const TARGET_DIR = process.env.TARGET_DIR ?? dist_dir
 
+function exportFooter(name) {
+    return `
+const ${name} = __${name}.${name}
+`
+}
+
+function globalThisFooter(name) {
+    return `
+const ${name} = __${name}.${name}
+if (typeof globalThis !== 'undefined' ) {
+    globalThis.${name} = ${name}
+} else {
+    var globalThis = {
+        ${name}: ${name},
+    }
+}
+`
+}
+
+function simpleTarget(name, footer) {
+    return {
+        input: src_dir + `/${name}.ts`,
+        output: [
+            {
+                file: dist_dir + `/${name}.js`,
+                name: `__${name}`,
+                format: 'iife',
+                strict: false,
+                footer: footer,
+            },
+        ],
+        plugins: [
+            commonjs(), json(), resolve(), typescript(), nodePolyfills(),
+            copyPlugin(`${dist_dir}/${name}.js`, `${TARGET_DIR}/${name}.js`),
+        ],
+    }
+}
+
 function copyPlugin(from, to) {
     return {
         name: 'Copy',
@@ -37,6 +75,9 @@ export default [
                 sourcemap: true,
                 footer: `
 const MusicPlayer = MpApi.MusicPlayer
+var fetch = (...args) => {
+    return MusicPlayer.runtime.fetch(...args)
+}
 `
             },
         ],
@@ -51,40 +92,45 @@ const MusicPlayer = MpApi.MusicPlayer
             copyPlugin(`${dist_dir}/${filename}.js.map`, `${TARGET_DIR}/${filename}.js.map`),
         ],
     },
-    /* {
-        input: src_dir + '/URL.ts',
-        output: [
-            {
-                file: dist_dir + `/URL.js`,
-                name: '__URL',
-                format: 'iife',
-                strict: false,
-                footer: `
-const URL = __URL.URL`
-            },
-        ],
-        plugins: [
-            commonjs(), json(), resolve(), typescript(), nodePolyfills(),
-            copyPlugin(`${dist_dir}/URL.js`, `${TARGET_DIR}/URL.js`),
-        ],
-    }, */
-    /* {
-        input: src_dir + '/TextEncoderDecoder.ts',
-        output: [
-            {
-                file: dist_dir + `/TextEncoderDecoder.js`,
-                name: '__TextEncoderDecoder',
-                format: 'iife',
-                strict: false,
-                footer: `
+    simpleTarget('URL', exportFooter('URL') + '\n' +`
+const URLSearchParams = __URL.URLSearchParams
+`),
+    simpleTarget('Headers', globalThisFooter('Headers')),
+    simpleTarget('Request', globalThisFooter('Request')),
+    simpleTarget('TextEncoderDecoder', `
 const TextEncoder = __TextEncoderDecoder.TextEncoder
-const TextDecoder = __TextEncoderDecoder.TextDecoder`
-            },
-        ],
-        plugins: [
-            commonjs(), json(), resolve(), typescript(), nodePolyfills(),
-            copyPlugin(`${dist_dir}/TextEncoderDecoder.js`, `${TARGET_DIR}/TextEncoderDecoder.js`),
-        ],
-    }, */
+const TextDecoder = __TextEncoderDecoder.TextDecoder
+if (typeof globalThis !== 'undefined' ) {
+    globalThis.TextEncoder = __TextEncoderDecoder.TextEncoder
+    globalThis.TextDecoder = __TextEncoderDecoder.TextDecoder
+} else {
+    var globalThis = {
+        TextEncoder: __TextEncoderDecoder.TextEncoder,
+        TextDecoder: __TextEncoderDecoder.TextDecoder,
+    }
+}
+
+const btoa = (data) => {
+    return sendMessage('btoa', JSON.stringify(data));
+}
+const atob = (data) => {
+    return sendMessage('atob', JSON.stringify(data));
+}
+
+class Intl {
+    static DateTimeFormat() {
+        return {
+            resolvedOptions() {
+                var timeZone = 'Europe/Moscow'
+                return {
+                    timeZone
+                }
+            }
+        }
+    }
+}
+
+`
+    ),
 ];
 
