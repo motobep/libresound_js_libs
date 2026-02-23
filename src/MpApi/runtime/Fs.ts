@@ -1,4 +1,4 @@
-import { SendMessageType } from '@MpApi/Runtime'
+import { SendMessageType } from '@runtime/Runtime'
 export declare const sendMessage: SendMessageType
 
 export class Fs {
@@ -19,8 +19,8 @@ export class Fs {
             JSON.stringify({ 'path': path, 'options': options }));
     }
 
-    async mpReadAsset(path: string): Promise<string> {
-        return await sendMessage('MP.runtime.fs.mpReadAsset',
+    async readAssetAsync(path: string): Promise<string> {
+        return await sendMessage('PS.readAssetAsync',
             JSON.stringify({ 'path': path }));
     }
 }

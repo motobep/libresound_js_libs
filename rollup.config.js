@@ -85,6 +85,7 @@ var fetch = (...args) => {
             alias({
                 entries: [
                     { find: '@MpApi', replacement: path.resolve('./src/MpApi') },
+                    { find: '@runtime', replacement: path.resolve('./src/MpApi/runtime') },
                 ],
             }),
             commonjs(), json(), resolve(), typescript(), nodePolyfills(),

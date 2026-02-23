@@ -1,10 +1,11 @@
-import { Logger } from '@MpApi/Logger';
+import { Logger } from '@runtime/Logger';
 import { z } from 'zod';
 
 export class FuncsManager {
     pools = {}
 
     makePool(name: string): FuncsPool {
+        this.logger.green('+++ makePool pool', name)
         z.string().parse(name)
         if (name in this.pools) {
             let errMsg = `Pool "${name}" already exists`
@@ -31,12 +32,12 @@ export class FuncsManager {
     }
 
     deletePool(name: string): void {
-        this.logger.log('delete pool', name)
+        this.logger.green('--- delete pool', name)
         z.string().parse(name)
         delete this.pools[name]
     }
 
-    logger = new Logger('📘 FuncsManager:')
+    logger = new Logger('🔌 FuncsManager:')
 }
 
 class FuncsPool {

@@ -38,3 +38,5 @@ export class Logger {
         '': '',
     };
 }
+
+export const gLogger = new Logger('')

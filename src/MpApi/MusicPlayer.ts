@@ -1,14 +1,20 @@
 import { z } from 'zod';
 
-import { ListType, NavType, RightControlsType } from './enums'
-import { ActionBtnDescr, Control, DownloadProps, Item, ItemAction, KeyValue, MusicItem, PageHeaderDescr, sActionBtnDescr, sControl, SectionDescr, sItem, sItemAction, sKeyValue, sMusicItem, sNavType, sPageHeaderDescr, sSectionDescr, MusicPageDescr, ControlsPageDescr, sMusicPageDescrUntyped, MusicPageDescrUntyped, ControlsPageDescrUntyped, sControlsPageDescrUntyped, PageDescr, sPageDescr, GroupItem } from './types'
+import { ListType, NavType, PlayState, RightControlsType } from './enums'
+import { ActionBtnDescr, Control, DownloadProps, ItemAction, KeyValue, MusicItem, PageHeaderDescr, sActionBtnDescr, sControl, SectionDescr, sItem, sItemAction, sKeyValue, sMusicItem, sNavType, sPageHeaderDescr, sSectionDescr, MusicPageDescr, ControlsPageDescr, sMusicPageDescrUntyped, MusicPageDescrUntyped, ControlsPageDescrUntyped, sControlsPageDescrUntyped, PageDescr, sPageDescr, GroupItem, sPlayState, Item } from './types'
 import { downloader } from './Downloader';
-import { Runtime, SendMessageType } from './Runtime'
-import { FuncsManager } from './internal/FuncsManager';
-import { Logger } from './Logger'
+import { Runtime, SendMessageType, BytesFetcher } from '@runtime/Runtime'
+import { FuncsManager } from '@runtime/internal/FuncsManager';
+import { Logger } from '@runtime/Logger'
+import { testAllPS } from './testAllPS';
 
 
 export declare const sendMessage: SendMessageType
+
+
+export function PS(a: string, b: any = null) {
+    return sendMessage(`PS.${a}`, JSON.stringify(b));
+}
 
 /**
  * The class to interact with the app
@@ -19,12 +25,13 @@ export class MusicPlayerClass {
     playback = new Playback()
     queue = new Queue()
     downloader = downloader
+    downloadsState = new DownloadsState()
     propertyStorage = new PropertyStorage()
     helpers = new Helpers()
     logger = new Logger('🔌')
     settings = {
         logger: new Logger('🔌settings'),
-        setControls(controls: Control[]) {
+        async setControlsAsync(controls: Control[]) {
             z.array(sControl).parse(controls)
             _checkControls(controls)
 
@@ -35,56 +42,91 @@ export class MusicPlayerClass {
             MusicPlayer._funcsManager.makePool(controlsPool);
             _addControlsToPool(controls, controlsPool)
 
-            sendMessage('PS.settings.setControls', JSON.stringify(controls));
+            await PS('settings.setControlsAsync', controls);
         },
     }
 
     _funcsManager = new FuncsManager()
+    _PS = (...args: any[]) => PS(...args)
+
+    testAllPS = (...args) => testAllPS(PS, ...args)
 
     /**
      * Get currently used language
      */
-    getLanguage(): string {
-        return sendMessage('PS.getLanguage', JSON.stringify({}));
-    }
-
-    downloadMusicItemAsync(mi: MusicItem): Promise<void> {
-        sMusicItem.parse(mi)
-        return sendMessage('PS.downloadMusicItemAsync', JSON.stringify(mi));
+    async getLanguageAsync(): Promise<string> {
+        return await PS('getLanguageAsync');
     }
 
     /**
      * Opens this plugin's source
      */
-    toThisSourceAsync(): Promise<void> {
-        return sendMessage('PS.toThisSourceAsync', JSON.stringify({}));
+    async toThisSourceAsync(): Promise<void> {
+        return await PS('toThisSourceAsync');
     }
 
     /**
      * Shows actions dialog
      */
-    showActionsDialog(actions: ItemAction[], tapPos: number[] | null = null): void {
+    async showActionsDialogAsync(actions: ItemAction[], tapPos: number[] | null = null): Promise<void> {
         z.array(sItemAction).parse(actions)
         z.nullable(z.array(z.number()))
         this._actions = actions
-        sendMessage('PS.showActionsDialog', JSON.stringify({ tapPos }));
+        await PS('showActionsDialogAsync', { tapPos });
     }
 
     /**
      * Closes actions dialog
      */
-    closeActionsDialog(): void {
-        sendMessage('PS.closeActionsDialog', JSON.stringify({}));
+    async closeActionsDialogAsync(): Promise<void> {
+        await PS('closeActionsDialogAsync');
     }
 
     _actions: any
+
+    // TODO: USE caching
+    // File? cachedFile = (await getCachedWebFile(mi.id));
+    // if (cachedFile != null) {
+    //   logger.log('From cache');
+    //   mi.filepath = cachedFile.path;
+    //   mi.downloaderType = DownloaderType.filepath;
+    //   return mi;
+    // }
+    // TODO: make bytes example
+    // var bytes = await mi.fetchBytes();
+    // if (bytes.isEmpty) {
+    //   throw 'logger.error downloading bytes - length == 0';
+    // }
+    //
+    // var newFile = await writeBytesWithTagsToCache(bytes, mi);
+    // // Download not aborted
+    // mi.filepath = newFile.path;
+    async saveMiIfCachedAsync(mi: MusicItem): Promise<string> {
+        return await PS('saveMiIfCachedAsync', { mi });
+    }
+
+    async saveMiAsync(mi: MusicItem, bytes: number[]): Promise<string> {
+        return await PS('saveMiAsync', { mi, bytes });
+    }
+
+    async showSnackBarAsync(message: string) {
+        await PS('showSnackBarAsync', { message })
+    }
+
+    async reloadFsSourceAsync() {
+        await PS('reloadFsSourceAsync')
+    }
 
     /**
      * Updates app state.
      * Use this method to update UI after changing app state.
      */
-    updateAppState() {
-        sendMessage('PS.updateAppState', JSON.stringify({}));
+    async updateAppStateAsync(): Promise<void> {
+        await PS('updateAppStateAsync');
+    }
+
+    isMusicItem(item: Item): boolean {
+        return 'extension' in item
     }
 }
 
@@ -96,9 +138,9 @@ export class Source {
     currMusicPage = new CurrMusicPage()
     errorManager = new ErrorManager()
 
-    initPageStacks(map: {
+    async initPageStacksAsync(map: {
         [name: string]: PageDescr[]
-    }): void {
+    }): Promise<void> {
         z.record(z.string(), z.array(sPageDescr)).parse(map)
 
         for (let name in map) {
@@ -113,84 +155,97 @@ export class Source {
             }
         }
 
-        sendMessage('PS.initPageStacks', JSON.stringify(map));
+        await PS('initPageStacksAsync', map);
     }
 
-    get currPageStackName(): string {
-        return sendMessage('PS.currPageStackName-get', JSON.stringify({}));
-    }
-    set currPageStackName(name: string) {
-        z.string().parse(name)
-        sendMessage('PS.currPageStackName-set', JSON.stringify(name));
+    async currPageStackName_getAsync(): Promise<string> {
+        return await PS('currPageStackName_getAsync')
     }
 
-    get currTabIdx(): number {
-        return sendMessage('PS.currTabIdx-get', JSON.stringify({}));
-    }
-    set currTabIdx(index: number) {
-        z.number().nonnegative().parse(index)
-        sendMessage('PS.currTabIdx-set', JSON.stringify(index));
-    }
-    getTabs(): string[][] {
-        return sendMessage('PS.getTabs', JSON.stringify({}));
-    }
-    setTabs(arr: string[][]): void {
-        z.array(z.array(z.string())).parse(arr)
-        sendMessage('PS.setTabs', JSON.stringify(arr));
+    async currPageStackName_setAsync(value: string) {
+        z.string().parse(value)
+        await PS('currPageStackName_setAsync', value)
     }
 
-    get currSearchTabIdx(): number {
-        return sendMessage('PS.currSearchTabIdx-get', JSON.stringify({}));
-    }
-    set currSearchTabIdx(index: number) {
-        z.number().nonnegative().parse(index)
-        sendMessage('PS.currSearchTabIdx-set', JSON.stringify(index));
-    }
-    getSearchTabs(): string[] {
-        return sendMessage('PS.getSearchTabs', JSON.stringify({}));
-    }
-    setSearchTabs(arr: string[]): void {
-        z.array(z.string()).parse(arr)
-        sendMessage('PS.setSearchTabs', JSON.stringify(arr));
+    async currTabIdx_getAsync(): Promise<number> {
+        return await PS('currTabIdx_getAsync')
     }
 
-    get navType() {
-        return sendMessage('PS.navType-get', JSON.stringify({}));
-    }
-    set navType(navType: NavType) {
-        sNavType.parse(navType)
-        sendMessage('PS.navType-set', JSON.stringify(navType));
+    async currTabIdx_setAsync(value: number) {
+        z.number().nonnegative().parse(value)
+        await PS('currTabIdx_setAsync', value)
     }
 
-    get isShowPreloader() {
-        return sendMessage('PS.isShowPreloader-get', JSON.stringify({}));
-    }
-    set isShowPreloader(isShow: boolean) {
-        z.boolean().parse(isShow)
-        sendMessage('PS.isShowPreloader-set', JSON.stringify(isShow));
+    // returns: [[TabNameString, IconName], ...]
+    async tabs_getAsync(): Promise<string[][]> {
+        return await PS('tabs_getAsync')
     }
 
-    get isShowSearch() {
-        return sendMessage('PS.isShowSearch-get', JSON.stringify({}));
-    }
-    set isShowSearch(isShow: boolean) {
-        z.boolean().parse(isShow)
-        sendMessage('PS.isShowSearch-set', JSON.stringify(isShow));
+    // value: [[TabNameString, IconName], ...]
+    async tabs_setAsync(value: string[][]) {
+        z.array(z.array(z.string())).parse(value)
+        await PS('tabs_setAsync', value)
     }
 
-    get rightControls() {
-        return sendMessage('PS.rightControls-set', JSON.stringify({}));
+    async currSearchTabIdx_getAsync(): Promise<number> {
+        return await PS('currSearchTabIdx_getAsync')
     }
-    set rightControls(controls: RightControlsType[]) {
-        z.array(z.string()).parse(controls)
-        sendMessage('PS.rightControls-set', JSON.stringify(controls));
+
+    async currSearchTabIdx_setAsync(value: number) {
+        z.number().nonnegative().parse(value)
+        await PS('currSearchTabIdx_setAsync', value)
     }
+
+    async searchTabs_getAsync(): Promise<string[]> {
+        return await PS('searchTabs_getAsync')
+    }
+
+    async searchTabs_setAsync(value: string[]) {
+        z.array(z.string()).parse(value)
+        await PS('searchTabs_setAsync', value)
+    }
+
+    async navType_getAsync(): Promise<NavType> {
+        return await PS('navType_getAsync')
+    }
+
+    async navType_setAsync(value: NavType) {
+        sNavType.parse(value)
+        await PS('navType_setAsync', value)
+    }
+
+    async isShowPreloader_getAsync(): Promise<boolean> {
+        return await PS('isShowPreloader_getAsync')
+    }
+
+    async isShowPreloader_setAsync(value: boolean) {
+        z.boolean().parse(value)
+        await PS('isShowPreloader_setAsync', value)
+    }
+
+    async isShowSearch_getAsync(): Promise<boolean> {
+        return await PS('isShowSearch_getAsync')
+    }
+
+    async isShowSearch_setAsync(value: boolean) {
+        z.boolean().parse(value)
+        await PS('isShowSearch_setAsync', value)
+    }
+
+    async rightControls_getAsync(): Promise<RightControlsType[]> {
+        return await PS('rightControls_getAsync')
+    }
+
+    async rightControls_setAsync(value: RightControlsType[]) {
+        z.array(z.string()).parse(value)
+        await PS('rightControls_setAsync', value)
+    }
+
 
     async updateThumbnailFromUrlAsync(id: string, url: string): Promise<boolean> {
         z.string().parse(id)
         z.string().parse(url)
-        return await sendMessage('PS.updateThumbnailFromUrlAsync',
-            JSON.stringify({ id: id, url: url }));
+        return await PS('updateThumbnailFromUrlAsync', { id: id, url: url });
     }
 }
 
@@ -198,54 +253,63 @@ export class Source {
  * Current Page Stack.
  */
 export class CurrPageStack {
-    get length(): number {
-        return sendMessage('PS.currPageStack.length-get', JSON.stringify({}));
+    async lengthAsync(): Promise<number> {
+        return await PS('currPageStack.length_getAsync');
     }
-    get last(): PageDescr {
-        return sendMessage('PS.currPageStack.last-get', JSON.stringify({}));
+    async last_getAsync(): Promise<PageDescr> {
+        return await PS('currPageStack.last_getAsync');
     }
-    setLast(pageDescr: PageDescr) {
+    async last_setAsync(pageDescr: PageDescr) {
         sPageDescr.parse(pageDescr)
         MusicPlayer.logger.log('setLast')
 
-        if (_getCurrPageType() === 'controls') {
-            MusicPlayer._funcsManager.deletePool(_getCurrPageId());
+        MusicPlayer._funcsManager.deletePool(await _getCurrPageIdAsync());
+
+        if (await _getCurrPageTypeAsync() === 'music') {
+            _addNamesToActionBtns((pageDescr as MusicPageDescr))
         }
 
-        sendMessage('PS.currPageStack.setLast', JSON.stringify(pageDescr));
+        await PS('currPageStack.last_setAsync', pageDescr);
 
-        if (_getCurrPageType() === 'controls') {
-            let currPageId = _getCurrPageId()
-            MusicPlayer._funcsManager.makePool(currPageId);
+        let currPageId = await _getCurrPageIdAsync()
+        /// Funcs pool for a page removed in back() in dart
+        MusicPlayer._funcsManager.makePool(currPageId)
+
+        if (await _getCurrPageTypeAsync() === 'music') {
+            _addActionBtnsToPool((pageDescr as MusicPageDescr), currPageId)
+        }
+        if (await _getCurrPageTypeAsync() === 'controls') {
             _addControlsToPool((pageDescr as ControlsPageDescr).controls, currPageId)
         }
     }
-    push(pageDescr: PageDescr) {
+    async pushAsync(pageDescr: PageDescr) {
         sPageDescr.parse(pageDescr)
         MusicPlayer.logger.log('push')
 
-        sendMessage('PS.currPageStack.push', JSON.stringify(pageDescr));
+        if (await _getCurrPageTypeAsync() === 'music') {
+            _addNamesToActionBtns((pageDescr as MusicPageDescr))
+        }
 
-        if (_getCurrPageType() === 'controls') {
-            let currPageId = _getCurrPageId()
-            MusicPlayer._funcsManager.makePool(currPageId);
+        await PS('currPageStack.push', pageDescr);
+
+        let currPageId = await _getCurrPageIdAsync()
+        /// Funcs pool for a page removed in back() in dart
+        MusicPlayer._funcsManager.makePool(currPageId);
+
+        if (await _getCurrPageTypeAsync() === 'music') {
+            _addActionBtnsToPool((pageDescr as MusicPageDescr), currPageId)
+        }
+        if (await _getCurrPageTypeAsync() === 'controls') {
             _addControlsToPool((pageDescr as ControlsPageDescr).controls, currPageId)
         }
     }
-    pop(): boolean {
-        if (_getCurrPageType() === 'controls') {
-            MusicPlayer._funcsManager.deletePool(_getCurrPageId());
-        }
-
-        return sendMessage('PS.currPageStack.pop', JSON.stringify({}));
-    }
 }
 
-function _getCurrPageId(): string {
-    return sendMessage('PS.currPageId', JSON.stringify({}));
+async function _getCurrPageIdAsync(): Promise<string> {
+    return await PS('currPage.IdAsync');
 }
-function _getCurrPageType(): string {
-    return sendMessage('PS.currPage.type', JSON.stringify({}));
+async function _getCurrPageTypeAsync(): Promise<string> {
+    return await PS('currPage.typeAsync');
 }
 
 /**
@@ -253,50 +317,62 @@ function _getCurrPageType(): string {
  * Don't use it if current page is not a Music Page
  */
 export class CurrMusicPage {
-    get title() {
-        return sendMessage('PS.currMusicPage.title-get', JSON.stringify({}));
+    async title_getAsync(): Promise<string> {
+        return await PS('currMusicPage.title_getAsync')
     }
 
-    set title(str: string) {
-        z.string().parse(str)
-        sendMessage('PS.currMusicPage.title.set', JSON.stringify(str));
+    async title_setAsync(value: string) {
+        z.string().parse(value)
+        await PS('currMusicPage.title_setAsync', value)
     }
 
-    get sectionlist(): SectionDescr[] {
-        return sendMessage('PS.currMusicPage.sectionlist-get', JSON.stringify({}))
+    async sectionlist_getAsync(): Promise<SectionDescr> {
+        return await PS('currMusicPage.sectionlist_getAsync')
     }
 
-    set sectionlist(val: SectionDescr[]) {
-        z.array(sSectionDescr).parse(val)
-        sendMessage('PS.currMusicPage.sectionlist-set', JSON.stringify(val))
+    async sectionlist_setAsync(value: SectionDescr) {
+        sSectionDescr.parse(value)
+
+        await _addActionsForCurrPageAsync(value)
+        await PS('currMusicPage.sectionlist_setAsync', value)
     }
 
-    get header(): PageHeaderDescr {
-        return sendMessage('PS.currMusicPage.header-get', JSON.stringify({}))
+    async header_getAsync(): Promise<PageHeaderDescr> {
+        return await PS('currMusicPage.header_getAsync')
     }
 
-    set header(val: PageHeaderDescr) {
-        sPageHeaderDescr.parse(val)
-        sendMessage('PS.currMusicPage.header-set', JSON.stringify(val))
+    async header_setAsync(value: PageHeaderDescr) {
+        sPageHeaderDescr.parse(value)
+
+        await _addActionsForCurrPageAsync(value)
+        await PS('currMusicPage.header_setAsync', value)
     }
 
-    get actionBtn(): ActionBtnDescr {
-        return sendMessage('PS.currMusicPage.actionBtn-get', JSON.stringify({}))
+    async acitonBtn_getAsync(): Promise<ActionBtnDescr> {
+        return await PS('currMusicPage.acitonBtn_getAsync')
     }
 
-    set actionBtn(val: ActionBtnDescr) {
-        sActionBtnDescr.parse(val)
-        sendMessage('PS.currMusicPage.actionBtn-set', JSON.stringify(val))
+    async acitonBtn_setAsync(value: ActionBtnDescr) {
+        sActionBtnDescr.parse(value)
+
+        await _addActionsForCurrPageAsync(value)
+        await PS('currMusicPage.acitonBtn_setAsync', value)
     }
 
-    get props() {
-        return sendMessage('PS.currPage.props-get', JSON.stringify({}));
+    async props_getAsync(): Promise<KeyValue> {
+        return await PS('currMusicPage.props_getAsync')
     }
 
-    set props(props: KeyValue) {
-        sKeyValue.parse(props)
-        sendMessage('PS.currPage.props-set', JSON.stringify(props));
+    async props_setAsync(value: KeyValue) {
+        sKeyValue.parse(value)
+        await PS('currMusicPage.props_setAsync', value)
     }
+}
+
+async function _addActionsForCurrPageAsync(value: object) {
+    let currPageId = await _getCurrPageIdAsync()
+    _addNamesToActionBtns(value)
+    _addActionBtnsToPool(value, currPageId)
 }
 
 /**
@@ -306,9 +382,19 @@ export class Playback {
     /**
      * Play track by [index] from Queue
      */
-    playByIdx(index: number): void {
+    async playByIdxAsync(index: number) {
         z.number().nonnegative().parse(index)
-        sendMessage('PS.playback.playByIdx', JSON.stringify(index));
+        await PS('playback.playByIdx', index);
+    }
+
+    async stopWithAsync(state: PlayState) {
+        sPlayState.parse(state)
+        await PS('playback.stopWithAsync', state);
+    }
+
+    async playFromUrlAsync(mi: MusicItem) {
+        sMusicItem.parse(mi)
+        return await PS('playback.playFromUrlAsync', mi);
     }
 }
 
@@ -319,60 +405,63 @@ export class Queue {
     /**
      * Inserts [list] at [index] in the queue
      */
-    insertAll(index: number, list: MusicItem[]): void {
+    async insertAllAsync(index: number, list: MusicItem[]): Promise<void> {
         z.number().nonnegative().parse(index)
         z.array(sMusicItem).parse(list)
-        sendMessage('PS.queue.insertAll', JSON.stringify({ index: index, list: list }));
+        await PS('queue.insertAllAsync', { index: index, list: list });
     }
     /**
      * Adds [list] at the end of the queue
      */
-    addAll(list: MusicItem[]): void {
-        z.array(sMusicItem).parse(list)
-        sendMessage('PS.queue.addAll', JSON.stringify(list));
+    async addAllAsync(list: MusicItem[]): Promise<void> {
+        z.array(sMusicItem).parse(list, {
+            reportInput: true
+        })
+        await PS('queue.addAllAsync', list);
     }
     /**
      * Removes a range of elements from the queue.
      * Removes the elements with positions greater than or equal to [start]
      * and less than [end], from the queue.
     */
-    removeRange(start: number, end: number): void {
+    async removeRangeAsync(start: number, end: number): Promise<void> {
         z.number().nonnegative().parse(start)
         z.number().nonnegative().parse(end)
-        sendMessage('PS.queue.removeRange', JSON.stringify({ start: start, end: end }));
+        await PS('queue.removeRangeAsync', { start: start, end: end });
     }
     /**
      * Removes items before and after the current track.
      * Only this track will remain
      */
-    clear(): void {
-        sendMessage('PS.queue.clear', JSON.stringify({}));
+    async clearAsync(): Promise<void> {
+        await PS('queue.clearAsync');
     }
     /**
      * Returns [MusicItem] by [index] from the queue
      */
-    getTrack(index: number): MusicItem {
+    async getTrack(index: number): Promise<MusicItem> {
         z.number().nonnegative().parse(index)
-        return sendMessage('PS.queue.getTrack', JSON.stringify(index));
+        return await PS('queue.getTrackAsync', index);
     }
     /**
      * Index of current track
      */
-    get currTrackIdx(): number {
-        return sendMessage('PS.queue.currTrackIdx-get', JSON.stringify({}));
+    async currTrackIdx_getAsync(): Promise<number> {
+        return await PS('queue.currTrackIdx_getAsync')
     }
+
     /**
      * Set index of current track
      */
-    set currTrackIdx(index: number) {
-        z.number().nonnegative().parse(index)
-        sendMessage('PS.queue.currTrackIdx-set', JSON.stringify(index));
+    async currTrackIdx_setAsync(value: number) {
+        z.number().nonnegative().parse(value)
+        await PS('queue.currTrackIdx_setAsync', value)
     }
     /**
      * Queue's length
      */
-    get length(): number {
-        return sendMessage('PS.queue.length-get', JSON.stringify({}));
+    async lengthAsync(): Promise<number> {
+        return await PS('queue.lengthAsync');
     }
 
     /**
@@ -382,15 +471,82 @@ export class Queue {
         /**
          * Inserts [MusicItem] after current track
          */
-        playNext: (mis: MusicItem[]) => {
-            z.array(sMusicItem).parse(mis)
-            let idx = this.currTrackIdx + 1
-            if (idx >= this.length) {
-                this.addAll(mis)
+        playNextAsync: async (mis: MusicItem[]) => {
+            z.array(sMusicItem, { error: () => `Validation failure for: \n${JSON.stringify(mis, null, 2)}\n` }).parse(mis, {
+                reportInput: true
+            })
+            let idx = (await this.currTrackIdx_getAsync()) + 1
+            if (idx >= await this.lengthAsync()) {
+                await this.addAllAsync(mis)
             } else {
-                this.insertAll(idx, mis)
+                await this.insertAllAsync(idx, mis)
             }
         },
+    }
+}
+
+export class DownloadsState {
+    _counter = 0
+    async download(obj: {
+        downloadType: string,
+        mi: MusicItem,
+        fetch: () => Promise<any>, abort: () => void
+    }): Promise<any> {
+        let { downloadType, mi, fetch, abort } = obj
+
+        let poolName = `DownloadState_(${this._counter})`
+        let pool = MusicPlayer._funcsManager.makePool(poolName)
+        pool.addWithId(fetch, 'fetch')
+        pool.addWithId(abort, 'abort')
+
+        let val = []
+        try {
+            console.log(`calling PS register`)
+            val = await PS('DownloadsState.download', { downloadType, id: mi.id, text: mi.title, poolName });
+            if (!val || val.length === 0) {
+                console.log(`bad val:`, val)
+            }
+        } catch (e) {
+            MusicPlayer.logger.error('Error in DownloadsState.download(): ' + e)
+            MusicPlayer._funcsManager.deletePool(poolName)
+            throw e
+        }
+
+        MusicPlayer._funcsManager.deletePool(poolName)
+        return val
+    }
+
+    async removeAndAbortByTypeAsync(type: string) {
+        await PS('DownloadsState.removeAndAbortByTypeAsync', { type });
+    }
+
+    async guardDownloadAsync(mi: MusicItem, fn: (bf: any) => Promise<any>) {
+        return await this.guardLoadAsync('download', mi, fn,)
+    }
+
+    async guardMusicItemLoadingAsync(mi: MusicItem, fn: (bf: any) => Promise<any>) {
+        await this.removeAndAbortByTypeAsync('play');
+        await MusicPlayer.playback.stopWithAsync(PlayState.loading)
+        try {
+            return await this.guardLoadAsync('play', mi, fn)
+        } catch (e) {
+            MusicPlayer.logger.warn('Exception downloading mi: ' + e)
+            // if (playState == PlayState.loading) { // Should check?
+            await MusicPlayer.playback.stopWithAsync(PlayState.notReady)
+            // }
+            throw e
+        }
+    }
+
+    async guardLoadAsync(downloadType: string, mi: MusicItem, fn: (bf: any) => Promise<any>) {
+        return await BytesFetcher.run(async (bf) => {
+            return await this.download({
+                downloadType,
+                mi,
+                abort: () => { bf.abort() },
+                fetch: async () => await fn(bf)
+            })
+        })
     }
 }
 
@@ -398,13 +554,13 @@ export class Queue {
  * Store and access any data as json in long-term memory
  */
 export class PropertyStorage {
-    get(name: string): any {
+    async getAsync(name: string): Promise<any> {
         z.string().parse(name)
-        return sendMessage('PS.propertyStorage.get', JSON.stringify(name));
+        return await PS('propertyStorage.getAsync', name);
     }
-    set(name: string, value: any) {
+    async setAsync(name: string, value: any) {
         z.string().parse(name)
-        sendMessage('PS.propertyStorage.set', JSON.stringify({ 'name': name, 'value': value }));
+        await PS('propertyStorage.setAsync', { 'name': name, 'value': value });
     }
 }
 
@@ -412,16 +568,16 @@ export class ErrorManager {
     /**
      * Get current error message
      */
-    get(): string {
-        return sendMessage('PS.errorManager.get', JSON.stringify({}));
+    async getAsync(): Promise<string> {
+        return await PS('errorManager.getAsync');
     }
     /**
      * Set error message that will be show instead of content.
      * Use empty string to clean error message
      */
-    set(err: string) {
+    async setAsync(err: string) {
         z.string(err)
-        sendMessage('PS.errorManager.set', JSON.stringify(err));
+        await PS('errorManager.setAsync', err);
     }
 }
 
@@ -462,11 +618,60 @@ export class Helpers {
             onDataReceived: (recieved: number, contentLength: number) => {
                 z.number().nonnegative().parse(recieved)
                 z.number().nonnegative().parse(contentLength)
-                downloader.update(downloadId,
+                downloader.updateAsync(downloadId,
                     `[${(recieved / contentLength * 100).toFixed(2)} %.]. Downloading "${name}"`
                 );
             }
         }
+    }
+
+    async setAttrsAsync(attrs: KeyValue) {
+        let Source = MusicPlayer.source
+        MusicPlayer.logger.blue('>>> Page attrs:', attrs)
+        if (attrs.hasOwnProperty('isShowSearch'))
+            await Source.isShowSearch_setAsync(attrs.isShowSearch)
+        if (attrs.hasOwnProperty('navType'))
+            await Source.navType_setAsync(attrs.navType)
+
+        if (attrs.hasOwnProperty('tabs')) {
+            if (attrs.navType === NavType.searchTabs) {
+                await Source.searchTabs_setAsync(attrs.tabs)
+            } else if (attrs.navType === NavType.tabs) {
+                await Source.tabs_setAsync(attrs.tabs)
+            }
+        }
+        if (attrs.hasOwnProperty('tabIdx')) {
+            if (attrs.navType === NavType.searchTabs) {
+                await Source.currSearchTabIdx_setAsync(attrs.tabIdx)
+            } else if (attrs.navType === NavType.tabs) {
+                await Source.currTabIdx_setAsync(attrs.tabIdx)
+            }
+        }
+    }
+
+    preloader(originalMethod: any, _context: any) {
+        async function replacementMethod(this: any, ...args: any[]) {
+            await Helpers._setPreloaderAsync(true)
+            let res: any
+            let err: Error
+            try {
+                res = await originalMethod.call(this, ...args);
+            } catch (e) {
+                err = e
+            }
+            await Helpers._setPreloaderAsync(false)
+            if (err) {
+                throw err
+            }
+            return res;
+        }
+
+        return replacementMethod;
+    }
+
+    static async _setPreloaderAsync(value: boolean) {
+        await MusicPlayer.source.isShowPreloader_setAsync(value)
+        await MusicPlayer.updateAppStateAsync()
     }
 }
 
@@ -494,4 +699,72 @@ function _addControlsToPool(controls: Control[], poolName: string) {
             pool.addWithId(el.onChanged, el.id)
         }
     }
+}
+
+function _addNamesToActionBtns(obj: object) {
+    MusicPlayer.logger.log('_addNamesToActionBtns')
+
+    let namedFuncs = _findPropertyPathsWithValues(obj, 'actionBtn')
+    for (let el of namedFuncs) {
+        let actionBtn = el.value
+        if (!actionBtn) {
+            MusicPlayer.logger.log(`Property '${el.path}' is nullish`)
+            continue
+        }
+        if (typeof actionBtn.callback !== "function") {
+            MusicPlayer.logger.warn(`Property '${el.path}' not function`)
+            continue
+        }
+        MusicPlayer.logger.blue(`_callbackName '${el.path}' set`)
+        actionBtn._callbackName = el.path
+    }
+}
+
+function _addActionBtnsToPool(obj: object, poolName: string) {
+    MusicPlayer.logger.warn('_addActionBtnsToPool for poolName', poolName)
+
+    var pool = MusicPlayer._funcsManager.getPool(poolName);
+    let namedFuncs = _findPropertyPathsWithValues(obj, 'actionBtn')
+    for (let el of namedFuncs) {
+        let actionBtn = el.value
+        if (!actionBtn) {
+            MusicPlayer.logger.log(`Property '${el.path}' is nullish`)
+            continue
+        }
+        if (typeof actionBtn.callback !== "function") {
+            MusicPlayer.logger.warn(`Property '${el.path}' not function`)
+            continue
+        }
+        MusicPlayer.logger.blue(`Property '${el.path}' set [${typeof actionBtn.callback}]`)
+        pool.addWithId(actionBtn.callback, el.path)
+    }
+}
+
+function _findPropertyPathsWithValues(obj: object, targetKey: string, currentPath = ''): { path: string, value: any }[] {
+    if (obj === null || typeof obj !== 'object') {
+        return [];
+    }
+    let pathsAndValues = [];
+
+    for (let key in obj) {
+        const path = currentPath ? `${currentPath}.${key}` : key
+
+        if (key === targetKey) {
+            pathsAndValues.push({ path, value: obj[key] })
+        }
+
+        // If the value is an array, iterate through its elements
+        if (Array.isArray(obj[key])) {
+            obj[key].forEach((item, index) => {
+                const arrayPath = `${path}[${index}]`
+                pathsAndValues = pathsAndValues.concat(
+                    _findPropertyPathsWithValues(item, targetKey, arrayPath));
+            });
+        } else {
+            pathsAndValues = pathsAndValues.concat(
+                _findPropertyPathsWithValues(obj[key], targetKey, path));
+        }
+    }
+
+    return pathsAndValues
 }

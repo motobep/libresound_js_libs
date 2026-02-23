@@ -35,11 +35,16 @@ export enum IconName {
     thumbs_down = 'thumbs_down',
 }
 
-export enum DownloaderType {
-    bytes = 'DownloaderType.bytes',
-    url = 'DownloaderType.url',
-}
-
 export enum RightControlsType {
     search = 'search',
+}
+
+export enum PlayState {
+    loading = 'loading',
+    notReady = 'notReady',
+}
+
+export enum Extension {
+    m4a = '.m4a',
+    mp3 = '.mp3',
 }

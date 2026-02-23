@@ -1,24 +1,23 @@
-import { SendMessageType } from '@MpApi/Runtime'
-export declare const sendMessage: SendMessageType
+import { PS } from './MusicPlayer';
 
 /**
  * App's Downloader
  */
 export class Downloader {
-    add(id: string, title: string) {
-        sendMessage('downloads__add', JSON.stringify({ id: id, title: title }));
+    async addAsync(id: string, title: string) {
+        await PS('downloads__add', { id: id, title: title });
     }
-    update(id: string, title: string) {
-        sendMessage('downloads__update', JSON.stringify({ id: id, title: title }));
+    async updateAsync(id: string, title: string) {
+        await PS('downloads__update', { id: id, title: title });
     }
-    has(id: string) {
-        return sendMessage('downloads__has', JSON.stringify({ id: id }));
+    async hasAsync(id: string) {
+        return await PS('downloads__has', { id: id });
     }
-    remove(id: string) {
-        return sendMessage('downloads__remove', JSON.stringify({ id: id }));
+    async removeAsync(id: string) {
+        return await PS('downloads__remove', { id: id });
     }
-    free(id: string) {
-        return sendMessage('downloads__free', JSON.stringify({ id: id }));
+    async freeAsync(id: string) {
+        return await PS('downloads__free', { id: id });
     }
 }
 

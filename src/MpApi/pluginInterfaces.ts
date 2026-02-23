@@ -51,34 +51,24 @@ export interface SourcePlugin {
     buildMultiActionsAsync(indexedItemsMap: { [key: string]: IndexedItem[] }): Promise<ItemAction[]>
 
     /**
-     * Called when user taps back button
+     * Called after user taps back button
      */
-    back(): boolean
-    /**
-     * Return value shows whether this source can go back.
-     * If it returns true then app will call [back()] method
-     */
-    canBack(): boolean
+    onAfterBack(): Promise<void>
 
     /**
-     * Returns bytes to be player by App's player
+     * Use with guardMusicItemLoadingAsync()
      */
-    fetchBytesAsync(mi: MusicItem, downloadId: string): Promise<number[]>
-    /**
-     * Returns url to be player by App's player
-     */
-    fetchUrlAsync(mi: MusicItem, downloadId: string): Promise<String>
+    playMusicItemAsync(mi: MusicItem): Promise<void>
 }
 
 /**
  * Optional events
  */
 export interface OptionalEventHandlers {
-    onPlaybackControlsOpen?(obj: any): void
-    onOpenedPlaybackPlayPrev?(obj: any): void
-    onOpenedPlaybackPlayNext?(obj: any): void
-    onBeforeFetch?(obj: any): void
-    onTapArtistTitle?(args: any): void
+    onPlaybackControlsOpen?(obj: any): Promise<void>
+    onOpenedPlaybackPlayPrev?(obj: any): Promise<void>
+    onOpenedPlaybackPlayNext?(obj: any): Promise<void>
+    onTapArtistTitle?(args: any): Promise<void>
 }
 
 /**

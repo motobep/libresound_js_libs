@@ -1,5 +1,5 @@
 import { z } from "zod";
-import { NavType, BodyType, ListType, IconName, DownloaderType, } from "./enums";
+import { NavType, BodyType, ListType, IconName, PlayState, Extension, } from "./enums";
 
 export const sKeyValue = z.record(z.string(), z.any());
 export type KeyValue = z.infer<typeof sKeyValue>
@@ -8,13 +8,14 @@ export const sNavType = z.enum(NavType);
 export const sBodyType = z.enum(BodyType);
 export const sListType = z.enum(ListType);
 export const sIconName = z.enum(IconName);
-export const sDownloaderType = z.enum(DownloaderType);
+export const sPlayState = z.enum(PlayState);
+export const sExtension = z.enum(Extension);
 
 
 export const sItemAction = z.object({
     text: z.string(),
     icon: sIconName.optional(),
-    callback: z.function({ input: [], output: z.void() })
+    callback: z.function({ input: [], output: z.promise(z.void()) })
 });
 export type ItemAction = z.infer<typeof sItemAction>
 
@@ -22,7 +23,7 @@ export const sItem = z.object({
     id: z.string(),
     title: z.string(),
     subtitle: z.string().optional(),
-    thumbnailUrl: z.string()
+    thumbnailUrl: z.string().optional()
 });
 export type Item = z.infer<typeof sItem>
 
@@ -35,19 +36,22 @@ export type IndexedItem = z.infer<typeof sIndexedItem>
 export const sMusicItem = sItem.extend({
     id: z.string(),
     title: z.string(),
-    subtitle: z.string().optional(),
-    thumbnailUrl: z.string(),
+    subtitle: z.string().nullish(),
+
+    filepath: z.string().nullish(),
+    url: z.string().nullish(),
+    thumbnailUrl: z.string().nullish(),
+
     artist: z.object({
         id: z.string().nullish(),
-        title: z.string()
-    }),
+        title: z.string().nullish()
+    }).nullish(),
     album: z.object({
         id: z.string().nullish(),
-        title: z.string()
-    }),
-    duration: z.number(),
-    downloaderType: sDownloaderType,
-    extension: z.string()
+        title: z.string().nullish()
+    }).nullish(),
+    duration: z.number().optional(),
+    extension: sExtension
 });
 export type MusicItem = z.infer<typeof sMusicItem>
 
@@ -55,16 +59,15 @@ export const sGroupItem = sItem.extend({
     id: z.string(),
     title: z.string(),
     subtitle: z.string().optional(),
-    thumbnailUrl: z.string(),
+    thumbnailUrl: z.string().optional(),
     props: sKeyValue.optional()
 });
 export type GroupItem = z.infer<typeof sGroupItem>
 
 export const sActionBtnDescr = z.object({
-    text: z.string(),
-    icon: sIconName.optional(),
-    callbackName: z.string(),
-    callbackArgs: z.array(z.string())
+    text: z.string().nullish(),
+    icon: sIconName.nullish(),
+    callback: z.function({ input: [], output: z.promise(z.void()) })
 });
 export type ActionBtnDescr = z.infer<typeof sActionBtnDescr>
 
@@ -72,7 +75,7 @@ export const sPageHeaderDescr = z.object({
     title: z.string(),
     subtitle: z.string().optional(),
     thumbnailUrl: z.string().optional(),
-    actionBtn: sActionBtnDescr.optional()
+    actionBtn: sActionBtnDescr.nullish()
 });
 export type PageHeaderDescr = z.infer<typeof sPageHeaderDescr>
 
@@ -85,7 +88,7 @@ export type DownloadProps = z.infer<typeof sDownloadProps>
 export const sSectionHeaderDescr = z.object({
     title: z.string().optional(),
     subtitle: z.string().optional(),
-    actionBtn: sActionBtnDescr.optional()
+    actionBtn: sActionBtnDescr.nullish()
 });
 export type SectionHeaderDescr = z.infer<typeof sSectionDescr>
 
@@ -167,7 +170,7 @@ export const sMusicPageDescr = z.object({
     title: z.string().optional(),
     sectionlist: z.array(sSectionDescr),
     header: sPageHeaderDescr.optional(),
-    actionBtn: sActionBtnDescr.optional(),
+    actionBtn: sActionBtnDescr.nullish(),
     props: sKeyValue.optional()
 });
 export type MusicPageDescr = z.infer<typeof sMusicPageDescr>

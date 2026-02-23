@@ -7,7 +7,8 @@
     "allowImportingTsExtensions": true,
     "moduleResolution": "bundler",
     "paths": {
-        "@MpApi/*": ["./src/MpApi/*"]
+        "@MpApi/*": ["./src/MpApi/*"],
+        "@runtime/*": ["./src/MpApi/runtime/*"]
     }
   }
 }

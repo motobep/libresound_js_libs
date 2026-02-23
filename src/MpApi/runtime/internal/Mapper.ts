@@ -1,5 +1,5 @@
-import { Fs } from '@MpApi/Fs'
-import { resolveSourceMap } from '@MpApi/internal/resolveSourceMap'
+import { Fs } from '@runtime/Fs'
+import { resolveSourceMap } from '@runtime/internal/resolveSourceMap'
 
 type SourceMapTrace = {
     at: string,
@@ -31,7 +31,7 @@ export class Mapper {
             if (fs.existsSync(mapPath)) {
                 let pluginSourceMap: string
                 if (mapPath.startsWith('assets/libresound_js_libs')) {
-                    pluginSourceMap = await fs.mpReadAsset(mapPath);
+                    pluginSourceMap = await fs.readAssetAsync(mapPath);
                 } else {
                     pluginSourceMap = fs.readFileSync(mapPath, 'utf8');
                 }
