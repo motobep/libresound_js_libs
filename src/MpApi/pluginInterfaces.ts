@@ -7,7 +7,7 @@ export interface SourcePlugin {
     /**
      * Called after this plugin was loaded
      */
-    afterInitAsync(): Promise<void>
+    initAsync(): Promise<void>
     /**
      * Called when user reloads page
      */
@@ -56,15 +56,36 @@ export interface SourcePlugin {
     onAfterBack(): Promise<void>
 
     /**
-     * Use with guardMusicItemLoadingAsync()
+     * Called before Playing music item.
+     * Throwing exception aborts play and sets to notReady state
+     *
+     * WARNING: Use with guardMusicItemLoadingAsync()
      */
-    playMusicItemAsync(mi: MusicItem): Promise<void>
+    setPlaybackSourceAsync(mi: MusicItem): Promise<void>
+}
+
+export interface Seekable {
+    /**
+     * *Concurrent*
+     * Seek to [milliseconds]
+     * Return true to prevent default seek.
+     */
+    seekAsync(milliseconds: number): Promise<boolean>
 }
 
 /**
  * Optional events
  */
 export interface OptionalEventHandlers {
+    /**
+     * Called before Resume playback. Throwing exception aborts resume.
+     */
+    onBeforeResumeAsync?(obj: any): Promise<void>
+    /**
+     * Called before Pause playback.
+     */
+    onBeforePauseAsync?(obj: any): Promise<void>
+    onPlayFailure?(obj: any): Promise<void>
     onPlaybackControlsOpen?(obj: any): Promise<void>
     onOpenedPlaybackPlayPrev?(obj: any): Promise<void>
     onOpenedPlaybackPlayNext?(obj: any): Promise<void>

@@ -23,6 +23,8 @@ function responseToRequestCookies(responseCookies: string[]) {
     });
 }
 
+let byteStreamController: ReadableStreamDefaultController<string> | undefined
+
 /**
  * A class that not only implments (imitates) parts of browser/nodejs API
  */
@@ -30,6 +32,7 @@ export class Runtime {
     fs = new Fs()
     // bytesFetcher = new BytesFetcher()
     sessionStorage = new SessionStorage()
+    byteStreamController = byteStreamController
 
     async fetch(url: string | URL, options = {}) {
         this.logger.log('fetch url:', url)
@@ -41,12 +44,14 @@ export class Runtime {
         }
 
         this._addRequestCookies(options)
+        this.logger.blue('headers.length', options.headers?.length)
+        this.logger.blue('cookie.length', options.headers?.cookie?.length)
 
         let resp = await MP('fetch', { 'url': url, 'options': options })
 
         this._saveResponseCookies(resp.cookies)
 
-        return _makeResp(resp);
+        return _makeResp(resp, options['signal']);
     }
 
     _addRequestCookies(options: object) {
@@ -80,17 +85,53 @@ export class Runtime {
         throw new Error(`deprecated`)
     }
 
+    // byteStreamControllerEnqueue(val: any): void {
+    //     byteStreamController.enqueue(val)
+    // }
+    // byteStreamControllerClose(): void {
+    //     byteStreamController.close()
+    // }
+
     onDataReceived(recieved: number, contentLength: number) {
         console.log((recieved / contentLength * 100).toFixed(2) + ' %');
     }
 
     setProxy(env: { http_proxy: string, https_proxy: string } | null) {
+        console.log('setProxyConfig', env)
         MP('setProxyConfig', env)
     }
 
-    logger = new Logger('[JS Runtime]:')
+    logger = new Logger('MpApi/runtime.ts: ')
 
     _mapper = new Mapper()
+
+    async addMappingsToErrorAsync(e: any, code: string) {
+        this.logger.blue('addMappingsToErrorAsync', e);
+        if (typeof e === 'string') {
+            this.logger.error('String error:', e);
+            return e
+        }
+        try {
+            this.logger.blue('mapStacktraceAsync', e, e.message, e.stack);
+            let stack = await this._mapper.mapStacktraceAsync(e.stack)
+            this.logger.blue('after mapStacktraceAsync');
+            let msg = 'Error in plugin lib code (runCodeInAsyncFunc): ' + e.message;
+            let s = 'Stacktrace:\n' + stack + 'Code:\n' + `${code}`
+            /*
+            this.logger.error('Error in plugin lib code (runCodeInAsyncFunc):', e.message +
+              '\nStacktrace:\n' + stack,
+              'Code:\n' + `${code}`);
+            */
+            e.message = msg
+            e.stack = s
+        } catch (mappingErr) {
+            this.logger.warn('Mapping Error (runCodeInAsyncFunc)', mappingErr.message);
+            this.logger.error('Error in plugin code:', e.message +
+                '\nStacktrace:\n' + e.stack);
+            return e
+        }
+        return e
+    }
 };
 
 async function MP_unit8ListToString(list: number[]): Promise<string> {
@@ -109,7 +150,9 @@ export class BytesFetcher {
         return new BytesFetcher(id)
     }
     async fetch(url: string | URL, options = {}) {
-        return _makeResp(await MP('BytesFetcher.fetch', { id: this.id, url, options }));
+        return _makeResp(await MP('BytesFetcher.fetch',
+            { id: this.id, url, options }),
+            options['signal']);
     }
     abort() {
         MP('BytesFetcher.abort', { id: this.id });
@@ -145,11 +188,46 @@ export function MP(a: string, b: any = null) {
     // console.log(`${a}(${b})`)
     return sendMessage(`MP.${a}`, JSON.stringify(b));
 }
-
-function _makeResp(resp: any) {
+function _makeResp(resp: any, signal: AbortSignal = undefined) {
     var getBytes = resp['getBytes']
+    var getChunk = resp['getChunk']
 
     var headers = resp['headers']
+
+    // FIXME: fix auto pull on construct
+    let IS_FIRST = true
+    // const body = null
+    const body = new __Streams.ReadableStream({
+        start(c: any) { byteStreamController = c; },
+        cancel(reason: any) { console.log('stream canceled', reason); },
+        async pull(controller: any) {
+            // console.log(`Calling pull`)
+            if (IS_FIRST) {
+                // console.log(`IS_FIRST`)
+                IS_FIRST = false
+                return
+            }
+            console.log(`getChunk`)
+            const chunk = await getChunk()
+            if (!chunk) {
+                console.log(`falsy chunk=${chunk}`)
+            }
+            if (chunk == null) {
+                console.log(`Runtime, chunk=${chunk}`)
+                controller.close();
+            } else {
+                console.log(`Runtime, chunk (${chunk.byteLength}): ${chunk}`)
+                controller.enqueue(chunk);
+            }
+        },
+    });
+
+    var abort = resp['abort']
+    // console.log(`signal=${signal}`)
+    if (signal) {
+        signal._onabort = abort
+    }
+
     let response = {
         status: resp['status'],
         ok: resp['ok'],
@@ -164,6 +242,7 @@ function _makeResp(resp: any) {
             let txt = await this.text()
             return JSON.parse(txt);
         },
+        body: body,
         cookies: resp['cookies'],
         location: resp['location'],
         // headers: resp['headers'],

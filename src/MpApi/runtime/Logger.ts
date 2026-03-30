@@ -1,8 +1,14 @@
+// import { MP } from "./Runtime"
+
+declare function MP(key: string, val: any): any;
+
 export class Logger {
     prefix: string
+    is_mp_logger: boolean
 
-    constructor(prefix: string) {
+    constructor(prefix: string, is_mp_logger: boolean = false) {
         this.prefix = prefix
+        this.is_mp_logger = is_mp_logger
     }
 
     log(...args: any) {
@@ -21,8 +27,18 @@ export class Logger {
         this.logGeneral(args, 'red')
     }
     logGeneral(args: any[], color: string) {
-        // TODO: Use app's logger
-        console.log(`${this._colorMap[color]}${this.prefix}`, ...args, `\x1B[0m`)
+        if (this.is_mp_logger) {
+            let argsStr = args.map(
+                (el) => typeof el === 'string' ? el : JSON.stringify(el))
+                .join(' ')
+            let s = `${this.prefix}${argsStr}`
+            MP('logger.logGeneral', { s, color })
+        } else {
+            console.log(`${this._colorMap[color]}${this.prefix}`, ...args, `\x1B[0m`)
+        }
+    }
+    debug(...args: any) {
+        this.logGeneral(args, 'blue')
     }
 
     _colorMap = {

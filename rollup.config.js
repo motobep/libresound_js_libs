@@ -93,7 +93,25 @@ var fetch = (...args) => {
             copyPlugin(`${dist_dir}/${filename}.js.map`, `${TARGET_DIR}/${filename}.js.map`),
         ],
     },
-    simpleTarget('URL', exportFooter('URL') + '\n' +`
+    simpleTarget('Streams', `
+// const ReadableStream = __Streams
+// const ReadableStream = __Streams.ReadableStream
+// const ReadableStreamReader = __Streams.ReadableStreamReader
+// const WritableStream = __Streams.WritableStream
+
+// if (typeof globalThis === 'undefined' ) {
+// } else {
+//     var globalThis = {}
+// }
+globalThis.ReadableStream = __Streams.ReadableStream
+// globalThis.ReadableStreamReader = __Streams.ReadableStreamReader
+// globalThis.WritableStream = __Streams.WritableStream
+`),
+    simpleTarget('AbortController', `
+const AbortSignal = __AbortController.AbortController
+const AbortController = __AbortController.AbortSignal
+`),
+    simpleTarget('URL', exportFooter('URL') + '\n' + `
 const URLSearchParams = __URL.URLSearchParams
 `),
     simpleTarget('Headers', globalThisFooter('Headers')),

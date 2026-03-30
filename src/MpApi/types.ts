@@ -23,7 +23,7 @@ export const sItem = z.object({
     id: z.string(),
     title: z.string(),
     subtitle: z.string().optional(),
-    thumbnailUrl: z.string().optional()
+    thumbnailUrl: z.string().nullish()
 });
 export type Item = z.infer<typeof sItem>
 
@@ -50,7 +50,7 @@ export const sMusicItem = sItem.extend({
         id: z.string().nullish(),
         title: z.string().nullish()
     }).nullish(),
-    duration: z.number().optional(),
+    duration: z.int().optional(),
     extension: sExtension
 });
 export type MusicItem = z.infer<typeof sMusicItem>
@@ -59,7 +59,7 @@ export const sGroupItem = sItem.extend({
     id: z.string(),
     title: z.string(),
     subtitle: z.string().optional(),
-    thumbnailUrl: z.string().optional(),
+    thumbnailUrl: z.string().nullish(),
     props: sKeyValue.optional()
 });
 export type GroupItem = z.infer<typeof sGroupItem>
@@ -93,11 +93,11 @@ export const sSectionHeaderDescr = z.object({
 export type SectionHeaderDescr = z.infer<typeof sSectionDescr>
 
 export const sSectionDescr = z.object({
-    header: sSectionHeaderDescr.optional(),
     listType: sListType,
-    itemlist: z.array(sItem),
-    isBigTile: z.boolean().optional(),
+    itemlist: z.union([z.array(sMusicItem), z.array(sGroupItem)]),
     rowsCount: z.number(),
+    header: sSectionHeaderDescr.optional(),
+    isBigTile: z.boolean().optional(),
     props: sKeyValue.optional()
 });
 export type SectionDescr = z.infer<typeof sSectionDescr>
@@ -167,8 +167,8 @@ export type Control = z.infer<typeof sControl>
 
 export const sMusicPageDescr = z.object({
     type: z.enum(['music']),
-    title: z.string().optional(),
     sectionlist: z.array(sSectionDescr),
+    title: z.string().optional(),
     header: sPageHeaderDescr.optional(),
     actionBtn: sActionBtnDescr.nullish(),
     props: sKeyValue.optional()
@@ -193,3 +193,10 @@ export type ControlsPageDescrUntyped = z.infer<typeof sControlsPageDescrUntyped>
 export const sPageDescr = z.union([sMusicPageDescr, sControlsPageDescr])
 export type PageDescr = z.infer<typeof sPageDescr>
 
+export const sTabs = z.array(z.object({
+    text: z.string(),
+    icon: z.string(),
+}))
+export type Tabs = z.infer<typeof sTabs>
+export const sSearchTabs = z.array(z.string())
+export type SearchTabs = z.infer<typeof sSearchTabs>

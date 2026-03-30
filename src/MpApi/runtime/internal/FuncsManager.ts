@@ -12,7 +12,6 @@ export class FuncsManager {
             this.logger.error('Error in makePool():', errMsg)
             throw new Error(errMsg);
         }
-        this.logger.log('make pool', name)
         this.pools[name] = new FuncsPool()
         return this.getPool(name)
     }
@@ -40,7 +39,7 @@ export class FuncsManager {
     logger = new Logger('🔌 FuncsManager:')
 }
 
-class FuncsPool {
+export class FuncsPool {
     funcsMap = {}
     counter = 0
 

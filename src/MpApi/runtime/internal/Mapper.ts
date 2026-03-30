@@ -18,6 +18,7 @@ export class Mapper {
     }
 
     async _modifyTraces(traces: (string | SourceMapTrace)[]): Promise<string> {
+        // console.log('_modifyTraces')
         let stacktrace = ''
         for (var el of traces) {
             if (typeof el === 'string') {
@@ -28,13 +29,17 @@ export class Mapper {
 
             const mapPath = t.fileDst + '.map'
             const fs = new Fs();
+            // console.log('existsSync')
             if (fs.existsSync(mapPath)) {
                 let pluginSourceMap: string
                 if (mapPath.startsWith('assets/libresound_js_libs')) {
+                    // console.log('readAssetAsync')
                     pluginSourceMap = await fs.readAssetAsync(mapPath);
                 } else {
+                    // console.log('readFile')
                     pluginSourceMap = fs.readFileSync(mapPath, 'utf8');
                 }
+                // console.log('resolveSourceMap')
                 let res = resolveSourceMap(pluginSourceMap, t.lineDst)
                 if (res !== null) {
                     t = { ...t, ...res }
@@ -42,6 +47,7 @@ export class Mapper {
             }
             stacktrace += this._traceToStr(t) + '\n'
         }
+        // console.log('_modifyTraces return')
         return stacktrace
     }
 
