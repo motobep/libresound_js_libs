@@ -20,5 +20,3 @@ export class Downloader {
         return await PS('downloads__free', { id: id });
     }
 }
-
-export const downloader = new Downloader()

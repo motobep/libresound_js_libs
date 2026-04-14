@@ -3,7 +3,7 @@ import { Logger } from "@runtime/Logger"
 import { Mapper } from "@runtime/internal/Mapper";
 
 export type SendMessageType = (a: string, b: string) => any
-export declare const sendMessage: SendMessageType
+export declare const __dartjs_sendMessage: SendMessageType
 
 
 export class SessionStorage {
@@ -23,7 +23,7 @@ function responseToRequestCookies(responseCookies: string[]) {
     });
 }
 
-let byteStreamController: ReadableStreamDefaultController<string> | undefined
+let byteStreamController: ReadableStreamController<string> | undefined
 
 /**
  * A class that not only implments (imitates) parts of browser/nodejs API
@@ -101,18 +101,28 @@ export class Runtime {
         MP('setProxyConfig', env)
     }
 
+    isTls1_3_get(): boolean {
+        return MP('isTls1_3_get')
+    }
+    isTls1_3_set(isTls1_3: boolean) {
+        console.log('isTls1_3', isTls1_3)
+        MP('isTls1_3_set', isTls1_3)
+    }
+
     logger = new Logger('MpApi/runtime.ts: ')
 
     _mapper = new Mapper()
 
     async addMappingsToErrorAsync(e: any, code: string) {
-        this.logger.blue('addMappingsToErrorAsync', e);
+        // this.logger.blue('addMappingsToErrorAsync', e);
+        this.logger.blue('addMappingsToErrorAsync');
         if (typeof e === 'string') {
             this.logger.error('String error:', e);
             return e
         }
         try {
-            this.logger.blue('mapStacktraceAsync', e, e.message, e.stack);
+            // this.logger.blue('mapStacktraceAsync', e, e.message, e.stack);
+            this.logger.blue('mapStacktraceAsync before');
             let stack = await this._mapper.mapStacktraceAsync(e.stack)
             this.logger.blue('after mapStacktraceAsync');
             let msg = 'Error in plugin lib code (runCodeInAsyncFunc): ' + e.message;
@@ -171,14 +181,12 @@ export class BytesFetcher {
             }
         } catch (e) {
             console.log('Error in BytesFetcher.run(): ' + e)
+            throw e
+        } finally {
             console.log('calling abort and delete')
             bf.abort()
             bf.delete()
-            throw e
         }
-        console.log('calling abort and delete')
-        bf.abort()
-        bf.delete()
         return ret
     }
     // logger = new Logger('[JS BytesFetcher]:')
@@ -186,7 +194,7 @@ export class BytesFetcher {
 
 export function MP(a: string, b: any = null) {
     // console.log(`${a}(${b})`)
-    return sendMessage(`MP.${a}`, JSON.stringify(b));
+    return __dartjs_sendMessage(`MP.${a}`, JSON.stringify(b));
 }
 function _makeResp(resp: any, signal: AbortSignal = undefined) {
     var getBytes = resp['getBytes']
@@ -194,19 +202,12 @@ function _makeResp(resp: any, signal: AbortSignal = undefined) {
 
     var headers = resp['headers']
 
-    // FIXME: fix auto pull on construct
-    let IS_FIRST = true
-    // const body = null
     const body = new __Streams.ReadableStream({
+        type: 'bytes', // NOTICE: removes first auto pull
         start(c: any) { byteStreamController = c; },
         cancel(reason: any) { console.log('stream canceled', reason); },
         async pull(controller: any) {
             // console.log(`Calling pull`)
-            if (IS_FIRST) {
-                // console.log(`IS_FIRST`)
-                IS_FIRST = false
-                return
-            }
             console.log(`getChunk`)
             const chunk = await getChunk()
             if (!chunk) {

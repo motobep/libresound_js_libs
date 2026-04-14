@@ -12,6 +12,15 @@ export const sPlayState = z.enum(PlayState);
 export const sExtension = z.enum(Extension);
 
 
+export const sTabs = z.array(z.object({
+    text: z.string(),
+    icon: z.string(),
+}))
+export type Tabs = z.infer<typeof sTabs>
+export const sSearchTabs = z.array(z.string())
+export type SearchTabs = z.infer<typeof sSearchTabs>
+
+
 export const sItemAction = z.object({
     text: z.string(),
     icon: sIconName.optional(),
@@ -23,7 +32,8 @@ export const sItem = z.object({
     id: z.string(),
     title: z.string(),
     subtitle: z.string().optional(),
-    thumbnailUrl: z.string().nullish()
+    thumbnailUrl: z.string().nullish(),
+    props: sKeyValue.optional(),
 });
 export type Item = z.infer<typeof sItem>
 
@@ -51,7 +61,8 @@ export const sMusicItem = sItem.extend({
         title: z.string().nullish()
     }).nullish(),
     duration: z.int().optional(),
-    extension: sExtension
+    extension: sExtension,
+    props: sKeyValue.optional(),
 });
 export type MusicItem = z.infer<typeof sMusicItem>
 
@@ -60,7 +71,7 @@ export const sGroupItem = sItem.extend({
     title: z.string(),
     subtitle: z.string().optional(),
     thumbnailUrl: z.string().nullish(),
-    props: sKeyValue.optional()
+    props: sKeyValue.optional(),
 });
 export type GroupItem = z.infer<typeof sGroupItem>
 
@@ -73,8 +84,8 @@ export type ActionBtnDescr = z.infer<typeof sActionBtnDescr>
 
 export const sPageHeaderDescr = z.object({
     title: z.string(),
-    subtitle: z.string().optional(),
-    thumbnailUrl: z.string().optional(),
+    subtitle: z.string().nullish(),
+    thumbnailUrl: z.string().nullish(),
     actionBtn: sActionBtnDescr.nullish()
 });
 export type PageHeaderDescr = z.infer<typeof sPageHeaderDescr>
@@ -109,8 +120,9 @@ export const sTextInput = z.object({
     initial: z.string().nullish(),
     hintText: z.string().nullish(),
     label: z.string().optional(),
-    onChanged: z.function({ input: [z.string()], output: z.void() }).nullish(),
     maxWidth: z.number().nonnegative().nullish(),
+    isWithCopy: z.boolean().nullish(),
+    onChanged: z.function({ input: [z.string()], output: z.void() }).nullish(),
 });
 export type TextInput = z.infer<typeof sTextInput>
 
@@ -141,9 +153,17 @@ export const sCheckboxInput = z.object({
 });
 export type CheckboxInput = z.infer<typeof sCheckboxInput>
 
+export const sButtonInput = z.object({
+    id: z.string(),
+    type: z.enum(['buttonInput']),
+    text: z.string().nullish(),
+    onTap: z.function({ input: [], output: z.void() }).nullish(),
+});
+export type ButtonInput = z.infer<typeof sButtonInput>
+
 
 export const sInput = z.union([
-    sTextInput, sSelectInput, sRadioGroupInput, sCheckboxInput])
+    sTextInput, sSelectInput, sRadioGroupInput, sCheckboxInput, sButtonInput])
 export type Input = z.infer<typeof sInput>
 
 
@@ -165,13 +185,26 @@ export const sControl = z.union([sInput, sText, sSpace])
 export type Control = z.infer<typeof sControl>
 
 
+export const sTabsNav = z.object({
+    type: sNavType.optional(),
+    tabs: z.union([sTabs, sSearchTabs]).optional(),
+    index: z.number().nonnegative().optional(),
+});
+export type TabsNav = z.infer<typeof sTabsNav>
+export const sAttrs = z.object({
+    isShowSearch: z.boolean().optional(),
+    tabsNav: sTabsNav.optional(),
+});
+export type Attrs = z.infer<typeof sAttrs>
+
 export const sMusicPageDescr = z.object({
     type: z.enum(['music']),
     sectionlist: z.array(sSectionDescr),
     title: z.string().optional(),
     header: sPageHeaderDescr.optional(),
     actionBtn: sActionBtnDescr.nullish(),
-    props: sKeyValue.optional()
+    attrs: sAttrs.nullish(),
+    props: sKeyValue.optional(),
 });
 export type MusicPageDescr = z.infer<typeof sMusicPageDescr>
 
@@ -181,7 +214,9 @@ export type MusicPageDescrUntyped = z.infer<typeof sMusicPageDescrUntyped>
 
 export const sControlsPageDescr = z.object({
     type: z.enum(['controls']),
+    title: z.string().optional(),
     controls: z.array(sControl),
+    attrs: sAttrs.nullish(),
     props: sKeyValue.optional()
 });
 export type ControlsPageDescr = z.infer<typeof sControlsPageDescr>
@@ -189,14 +224,33 @@ export type ControlsPageDescr = z.infer<typeof sControlsPageDescr>
 export const sControlsPageDescrUntyped = sControlsPageDescr.omit({ 'type': true })
 export type ControlsPageDescrUntyped = z.infer<typeof sControlsPageDescrUntyped>
 
+export const sWebViewPageDescr = z.object({
+    type: z.enum(['webView']),
+    title: z.string().optional(),
+    url: z.string(),
+    attrs: sAttrs.nullish(),
+    props: sKeyValue.optional()
+});
+export type WebViewPageDescr = z.infer<typeof sWebViewPageDescr>
 
-export const sPageDescr = z.union([sMusicPageDescr, sControlsPageDescr])
+export const sWebViewPageDescrUntyped = sWebViewPageDescr.omit({ 'type': true })
+export type WebViewPageDescrUntyped = z.infer<typeof sWebViewPageDescrUntyped>
+
+
+export const sPageDescr = z.union([sMusicPageDescr, sControlsPageDescr, sWebViewPageDescr])
+/**
+ * Use props.attrs to set page attributes
+ * Use props.funcs to save your functions in PageDescr
+ *  and access them after deserialization
+ */
 export type PageDescr = z.infer<typeof sPageDescr>
 
-export const sTabs = z.array(z.object({
-    text: z.string(),
-    icon: z.string(),
-}))
-export type Tabs = z.infer<typeof sTabs>
-export const sSearchTabs = z.array(z.string())
-export type SearchTabs = z.infer<typeof sSearchTabs>
+/**
+ * If synced lyrics use LRC for LyricsData.text,
+ * if not use plain text for LyricsData.text
+ */
+export type LyricsData = {
+    text: string,
+    isSynced: boolean,
+    descr: string,
+}

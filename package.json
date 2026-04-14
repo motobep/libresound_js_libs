@@ -51,6 +51,7 @@
   },
   "dependencies": {
     "@jridgewell/sourcemap-codec": "^1.5.5",
+    "formdata-polyfill": "^4.0.10",
     "headers-polyfill": "^4.0.3",
     "text-encoding-shim": "^1.0.5",
     "web-streams-polyfill": "^4.2.0",

@@ -1,10 +1,10 @@
 import { Logger } from '@runtime/Logger';
 import { z } from 'zod';
 
-export class FuncsManager {
+export class PoolsManager {
     pools = {}
 
-    makePool(name: string): FuncsPool {
+    makePool(name: string): Pool {
         this.logger.green('+++ makePool pool', name)
         z.string().parse(name)
         if (name in this.pools) {
@@ -12,11 +12,11 @@ export class FuncsManager {
             this.logger.error('Error in makePool():', errMsg)
             throw new Error(errMsg);
         }
-        this.pools[name] = new FuncsPool()
+        this.pools[name] = new Pool()
         return this.getPool(name)
     }
 
-    getPool(name: string): FuncsPool {
+    getPool(name: string): Pool {
         if (!(name in this.pools)) {
             let errMsg = `Pool "${name}" doesn't exist`
             this.logger.error('Error in getPool():', errMsg)
@@ -36,26 +36,26 @@ export class FuncsManager {
         delete this.pools[name]
     }
 
-    logger = new Logger('🔌 FuncsManager:')
+    logger = new Logger('🔌 PoolsManager:')
 }
 
-export class FuncsPool {
-    funcsMap = {}
-    counter = 0
+export class Pool {
+    _map = {}
+    _counter = 0
 
     get(name: string): () => void {
         z.string().parse(name)
-        return this.funcsMap[name]
+        return this._map[name]
     }
 
-    add(func: (...args: any[]) => void): string {
-        let name = '__f_' + ++this.counter
-        this.funcsMap[name] = func
+    add(el: any): string {
+        let name = '__id_' + ++this._counter
+        this._map[name] = el
         return name
     }
 
-    addWithId(func: (...args: any[]) => void, id: string): string {
-        this.funcsMap[id] = func
+    addWithId(id: string, el: any): string {
+        this._map[id] = el
         return id
     }
 }

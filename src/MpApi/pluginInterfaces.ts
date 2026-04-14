@@ -1,4 +1,4 @@
-import { GroupItem, IndexedItem, ItemAction, MusicItem } from './types'
+import { GroupItem, IndexedItem, ItemAction, LyricsData, MusicItem } from './types'
 
 /**
  * Must be implemented by source plugins ("type": "js:source")
@@ -100,4 +100,19 @@ export interface Settings {
         onOpen(): void
         onClose(): void
     }
+}
+
+/**
+ * Must be implemented by source plugins ("type": "js:lyrics")
+ */
+export interface LyricsPlugin {
+    /**
+     * Called after this plugin was loaded
+     */
+    initAsync(): Promise<void>
+    /**
+     * Get lyrics data.
+     * If synced lyrics return LRC, if not return plain text
+     */
+    getLyricsAsync(mi: MusicItem): Promise<LyricsData>
 }

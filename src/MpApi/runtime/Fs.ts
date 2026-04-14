@@ -1,26 +1,29 @@
 import { SendMessageType } from '@runtime/Runtime'
-export declare const sendMessage: SendMessageType
+export declare const __dartjs_sendMessage: SendMessageType
+
+function fsSend(a: string, b: any = null) {
+    return __dartjs_sendMessage(`MP.runtime.fs.${a}`, JSON.stringify(b));
+}
+function PS(a: string, b: any = null) {
+    return __dartjs_sendMessage(`PS.${a}`, JSON.stringify(b));
+}
 
 export class Fs {
     async readFile(path: string,
         options: { encoding: string, flag: string } | string = ''): Promise<string> {
-        return await sendMessage('MP.runtime.fs.readFile',
-            JSON.stringify({ 'path': path, 'options': options }));
+        return await fsSend('readFile', { 'path': path, 'options': options })
     }
 
     existsSync(path: string): boolean {
-        return sendMessage('MP.runtime.fs.existsSync',
-            JSON.stringify({ 'path': path }));
+        return fsSend('existsSync', { 'path': path })
     }
 
     readFileSync(path: string,
         options: { encoding: string, flag: string } | string = ''): string {
-        return sendMessage('MP.runtime.fs.readFileSync',
-            JSON.stringify({ 'path': path, 'options': options }));
+        return fsSend('readFileSync', { 'path': path, 'options': options })
     }
 
     async readAssetAsync(path: string): Promise<string> {
-        return await sendMessage('PS.readAssetAsync',
-            JSON.stringify({ 'path': path }));
+        return await PS('readAssetAsync', { 'path': path })
     }
 }

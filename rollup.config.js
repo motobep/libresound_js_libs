@@ -74,9 +74,9 @@ export default [
                 strict: false,
                 sourcemap: true,
                 footer: `
-const MusicPlayer = MpApi.MusicPlayer
+const musicPlayer = MpApi.musicPlayer
 var fetch = (...args) => {
-    return MusicPlayer.runtime.fetch(...args)
+    return musicPlayer.runtime.fetch(...args)
 }
 `
             },
@@ -116,6 +116,7 @@ const URLSearchParams = __URL.URLSearchParams
 `),
     simpleTarget('Headers', globalThisFooter('Headers')),
     simpleTarget('Request', globalThisFooter('Request')),
+    simpleTarget('FormData', globalThisFooter('FormData')),
     simpleTarget('TextEncoderDecoder', `
 const TextEncoder = __TextEncoderDecoder.TextEncoder
 const TextDecoder = __TextEncoderDecoder.TextDecoder
@@ -130,10 +131,10 @@ if (typeof globalThis !== 'undefined' ) {
 }
 
 const btoa = (data) => {
-    return sendMessage('btoa', JSON.stringify(data));
+    return __dartjs_sendMessage('btoa', JSON.stringify(data));
 }
 const atob = (data) => {
-    return sendMessage('atob', JSON.stringify(data));
+    return __dartjs_sendMessage('atob', JSON.stringify(data));
 }
 
 class Intl {

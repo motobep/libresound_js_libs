@@ -1,33 +1,35 @@
 import { z } from 'zod';
 
 import { ListType, NavType, PlayState, RightControlsType } from './enums'
-import { ActionBtnDescr, Control, DownloadProps, ItemAction, KeyValue, MusicItem, PageHeaderDescr, sActionBtnDescr, sControl, SectionDescr, sItem, sItemAction, sKeyValue, sMusicItem, sNavType, sPageHeaderDescr, sSectionDescr, MusicPageDescr, ControlsPageDescr, sMusicPageDescrUntyped, MusicPageDescrUntyped, ControlsPageDescrUntyped, sControlsPageDescrUntyped, PageDescr, sPageDescr, GroupItem, sPlayState, Item, sTabs, sSearchTabs, Tabs } from './types'
-import { downloader } from './Downloader';
+import { ActionBtnDescr, Control, DownloadProps, ItemAction, KeyValue, MusicItem, PageHeaderDescr, sActionBtnDescr, sControl, SectionDescr, sItem, sItemAction, sKeyValue, sMusicItem, sNavType, sPageHeaderDescr, sSectionDescr, MusicPageDescr, ControlsPageDescr, sMusicPageDescrUntyped, MusicPageDescrUntyped, ControlsPageDescrUntyped, sControlsPageDescrUntyped, PageDescr, sPageDescr, GroupItem, sPlayState, Item, sTabs, sSearchTabs, Tabs, Attrs, SearchTabs, sAttrs } from './types'
+import { Downloader } from './Downloader';
 import { Runtime, SendMessageType, BytesFetcher } from '@runtime/Runtime'
-import { FuncsManager, FuncsPool } from '@runtime/internal/FuncsManager';
+import { PoolsManager } from './runtime/internal/PoolsManager';
 import { Logger } from '@runtime/Logger'
 import { testAllPS } from './testAllPS';
+import { WebView } from './WebView';
 
 
-export declare const sendMessage: SendMessageType
+export declare const __dartjs_sendMessage: SendMessageType
 
 
 export function PS(a: string, b: any = null) {
-    return sendMessage(`PS.${a}`, JSON.stringify(b));
+    return __dartjs_sendMessage(`PS.${a}`, JSON.stringify(b));
 }
 
 /**
  * The class to interact with the app
  */
-export class MusicPlayerClass {
-    runtime: Runtime = new Runtime()
+export class MusicPlayer {
+    runtime = new Runtime()
     source = new Source()
     playback = new Playback()
     queue = new Queue()
-    downloader = downloader
+    downloader = new Downloader()
     downloadsState = new DownloadsState()
     propertyStorage = new PropertyStorage()
     helpers = new Helpers()
+    webView = new WebView()
     logger = new Logger('🔌MusicPlayer: ')
     settings = {
         logger: new Logger('🔌settings '),
@@ -36,17 +38,17 @@ export class MusicPlayerClass {
             _checkControls(controls)
 
             const controlsPool = 'controlsPool'
-            if (MusicPlayer._funcsManager.contains(controlsPool)) {
-                MusicPlayer._funcsManager.deletePool(controlsPool);
+            if (musicPlayer._poolManager.contains(controlsPool)) {
+                musicPlayer._poolManager.deletePool(controlsPool);
             }
-            MusicPlayer._funcsManager.makePool(controlsPool);
+            musicPlayer._poolManager.makePool(controlsPool);
             _addControlsToPool(controls, controlsPool)
 
             await PS('settings.setControlsAsync', controls);
         },
     }
 
-    _funcsManager = new FuncsManager()
+    _poolManager = new PoolsManager()
     _PS = (...args: any[]) => PS(...args)
 
     testAllPS = (...args) => testAllPS(PS, ...args)
@@ -101,10 +103,21 @@ export class MusicPlayerClass {
     // var newFile = await writeBytesWithTagsToCache(bytes, mi);
     // // Download not aborted
     // mi.filepath = newFile.path;
-    async saveMiIfCachedAsync(mi: MusicItem): Promise<string> {
-        return await PS('saveMiIfCachedAsync', { mi });
+    async cachedMiExistsAsync(mi: MusicItem): Promise<boolean> {
+        return await PS('cachedMiExistsAsync', { mi });
+    }
+    /** 
+     * Returns string if errored
+     * null - if not
+    */
+    async saveCachedMiAsync(mi: MusicItem): Promise<string | 'INVALID_SOURCE_DIR' | null> {
+        return await PS('saveCachedMiAsync', { mi });
     }
 
+    /** 
+     * Returns string if errored
+     * null - if not
+    */
     async saveMiAsync(mi: MusicItem, bytes: number[]): Promise<string> {
         return await PS('saveMiAsync', { mi, bytes });
     }
@@ -138,24 +151,10 @@ export class Source {
     currMusicPage = new CurrMusicPage()
     errorManager = new ErrorManager()
 
-    async initPageStacksAsync(map: {
-        [name: string]: PageDescr[]
-    }): Promise<void> {
-        z.record(z.string(), z.array(sPageDescr)).parse(map)
-
-        for (let name in map) {
-            let stack = map[name]
-            for (let i in stack) {
-                let page = stack[i]
-                if (page.type === 'controls') {
-                    let currPageId = `${name}.${i}`
-                    MusicPlayer._funcsManager.makePool(currPageId);
-                    _addControlsToPool(page.controls, currPageId)
-                }
-            }
-        }
-
-        await PS('initPageStacksAsync', map);
+    // NOTICE: Funcs pool for a page created/deleted automatically in dart
+    async initPageStacksAsync(stacksNames: string[]): Promise<void> {
+        z.array(z.string()).parse(stacksNames)
+        await PS('initPageStacksAsync', stacksNames);
     }
 
     async currPageStackName_getAsync(): Promise<string> {
@@ -247,6 +246,20 @@ export class Source {
         z.string().parse(url)
         return await PS('updateThumbnailFromUrlAsync', { id: id, url: url });
     }
+
+    eventListeners = {}
+    /**
+     * scrollEnd:
+     *   args: scorllExtents: KeyValue
+     */
+    async addEventListenerAsync(type: 'scrollEnd', listener: (...args: any) => void) {
+        switch (type) {
+            case 'scrollEnd':
+                this.eventListeners[type] = listener
+                await PS('source.addEventListener_scrollEnd');
+                break
+        }
+    }
 }
 
 /**
@@ -257,52 +270,68 @@ export class CurrPageStack {
         return await PS('currPageStack.length_getAsync');
     }
     async last_getAsync(): Promise<PageDescr> {
-        return await PS('currPageStack.last_getAsync');
-    }
-    async last_setAsync(pageDescr: PageDescr) {
-        sPageDescr.parse(pageDescr)
-        MusicPlayer.logger.log('setLast')
-
-        MusicPlayer._funcsManager.deletePool(await _getCurrPageIdAsync());
-
-        if (await _getCurrPageTypeAsync() === 'music') {
-            _addNamesToActionBtns((pageDescr as MusicPageDescr))
-        }
-
-        await PS('currPageStack.last_setAsync', pageDescr);
-
+        let page = await PS('currPageStack.last_getAsync');
         let currPageId = await _getCurrPageIdAsync()
-        /// Funcs pool for a page removed in back() in dart
-        MusicPlayer._funcsManager.makePool(currPageId)
-
-        if (await _getCurrPageTypeAsync() === 'music') {
-            _addActionBtnsToPool((pageDescr as MusicPageDescr), currPageId)
-        }
-        if (await _getCurrPageTypeAsync() === 'controls') {
-            _addControlsToPool((pageDescr as ControlsPageDescr).controls, currPageId)
-        }
+        _addFuncs(currPageId, page)
+        return page
     }
+    // NOTICE: Funcs pool for a page created/deleted automatically in dart
+    async last_setAsync(pageDescr: PageDescr) {
+        sPageDescr.parse(pageDescr, { reportInput: true })
+        musicPlayer.logger.blue('last_setAsync')
+        await CurrPageStack._onBeforePageCreate(pageDescr)
+        await PS('currPageStack.last_setAsync', pageDescr);
+        await CurrPageStack._onPageCreate(pageDescr)
+    }
+    // NOTICE: Funcs pool for a page created/deleted automatically in dart
     async pushAsync(pageDescr: PageDescr) {
         sPageDescr.parse(pageDescr, { reportInput: true })
-        // MusicPlayer.logger.log('pushAsync')
+        // musicPlayer.logger.log('pushAsync')
+        await CurrPageStack._onBeforePageCreate(pageDescr)
+        await PS('currPageStack.pushAsync', pageDescr);
+        await CurrPageStack._onPageCreate(pageDescr)
+    }
 
-        if (await _getCurrPageTypeAsync() === 'music') {
-            _addNamesToActionBtns((pageDescr as MusicPageDescr))
-        }
-
-        await PS('currPageStack.push', pageDescr);
-
-        let currPageId = await _getCurrPageIdAsync()
-        /// Funcs pool for a page removed in back() in dart
-        MusicPlayer._funcsManager.makePool(currPageId);
-
-        if (await _getCurrPageTypeAsync() === 'music') {
-            _addActionBtnsToPool((pageDescr as MusicPageDescr), currPageId)
-        }
-        if (await _getCurrPageTypeAsync() === 'controls') {
-            _addControlsToPool((pageDescr as ControlsPageDescr).controls, currPageId)
+    static async _onBeforePageCreate(page: PageDescr) {
+        if (page.type === 'music') {
+            _addNamesToActionBtns((page as MusicPageDescr))
         }
     }
+    static async _onPageCreate(page: PageDescr) {
+        let currPageId = await _getCurrPageIdAsync()
+        if (await _getCurrPageTypeAsync() === 'music') {
+            _addActionBtnsToPool((page as MusicPageDescr), currPageId)
+        }
+        if (await _getCurrPageTypeAsync() === 'controls') {
+            _addControlsToPool((page as ControlsPageDescr).controls, currPageId)
+        }
+        if (page.props?.funcs) {
+            _saveFuncs(currPageId, page.props.funcs)
+        }
+    }
+
+    // NOTICE: Funcs pool for a page created/deleted automatically in dart
+    async popAsync(): Promise<boolean> {
+        musicPlayer.logger.blue('popAsync')
+        return await PS('currPageStack.popAsync');
+    }
+}
+
+function _addFuncs(poolId: string, page: PageDescr) {
+    musicPlayer.logger.debug('_addFuncs')
+    var pool = musicPlayer._poolManager.getPool(poolId);
+    var funcs = pool.get('page_props_funcs')
+    if (funcs) {
+        page.props = { ...page.props, funcs, }
+    }
+}
+
+function _saveFuncs(poolId: string, funcs: {
+    [x: string]: (...args: any) => any;
+}) {
+    musicPlayer.logger.debug('_saveFuncs')
+    var pool = musicPlayer._poolManager.getPool(poolId);
+    pool.addWithId('page_props_funcs', funcs)
 }
 
 async function _getCurrPageIdAsync(): Promise<string> {
@@ -326,12 +355,12 @@ export class CurrMusicPage {
         await PS('currMusicPage.title_setAsync', value)
     }
 
-    async sectionlist_getAsync(): Promise<SectionDescr> {
+    async sectionlist_getAsync(): Promise<SectionDescr[]> {
         return await PS('currMusicPage.sectionlist_getAsync')
     }
 
-    async sectionlist_setAsync(value: SectionDescr) {
-        sSectionDescr.parse(value)
+    async sectionlist_setAsync(value: SectionDescr[]) {
+        z.array(sSectionDescr).parse(value, { reportInput: true })
 
         await _addActionsForCurrPageAsync(value)
         await PS('currMusicPage.sectionlist_setAsync', value)
@@ -359,13 +388,24 @@ export class CurrMusicPage {
         await PS('currMusicPage.acitonBtn_setAsync', value)
     }
 
-    async props_getAsync(): Promise<KeyValue> {
-        return await PS('currMusicPage.props_getAsync')
+    async attrs_getAsync(): Promise<Attrs | null> {
+        return await PS('currMusicPage.attrs_getAsync')
     }
 
-    async props_setAsync(value: KeyValue) {
-        sKeyValue.parse(value)
-        await PS('currMusicPage.props_setAsync', value)
+    async props_getAsync(): Promise<KeyValue> {
+        let props = await PS('currMusicPage.props_getAsync')
+        let currPageId = await _getCurrPageIdAsync()
+        _addFuncs(currPageId, props)
+        return props
+    }
+
+    async props_setAsync(props: KeyValue) {
+        sKeyValue.parse(props)
+        let currPageId = await _getCurrPageIdAsync()
+        if (props?.funcs) {
+            _saveFuncs(currPageId, props.funcs)
+        }
+        await PS('currMusicPage.props_setAsync', props)
     }
 }
 
@@ -379,13 +419,13 @@ async function _addActionsForCurrPageAsync(value: object) {
  * App's Playback
  */
 export class Playback {
-    // /**
-    //  * Play track by [index] from Queue
-    //  */
-    // async playByIdxAsync(index: number) {
-    //     z.number().nonnegative().parse(index)
-    //     await PS('playback.playByIdx', index);
-    // }
+    /**
+     * Play track by [index] from Queue
+     */
+    async playByIdxAsync(index: number) {
+        z.number().nonnegative().parse(index)
+        await PS('playback.playByIdx', index);
+    }
 
     async stopWithAsync(state: PlayState) {
         sPlayState.parse(state)
@@ -416,20 +456,15 @@ export class Playback {
         return await PS('playback.setPositionAsync', { milliseconds });
     }
 
-    async addOnUpdateListenerAsync(fn: (ms: number) => void) {
-        let poolName = Playback._updateListenersPoolName
-        let fnName = 'onUpdate'
-        let pool: FuncsPool
-        if (MusicPlayer._funcsManager.contains(poolName)) {
-            pool = MusicPlayer._funcsManager.getPool(poolName)
-        } else {
-            pool = MusicPlayer._funcsManager.makePool(poolName)
+    eventListeners = {}
+    async addEventListenerAsync(type: 'counterUpdate', listener: (...args: any) => void) {
+        switch (type) {
+            case 'counterUpdate':
+                this.eventListeners[type] = listener
+                await PS('playback.addEventListener_counterUpdate');
+                break
         }
-        pool.addWithId(fn, fnName)
-        return await PS('playback.addOnUpdateListenerAsync', { fnName });
     }
-
-    static _updateListenersPoolName = '_updateListenersPool'
 }
 
 /**
@@ -524,6 +559,28 @@ export class Queue {
             }
         },
     }
+
+    async canAutoplayAsync(): Promise<boolean> {
+        return await PS('queue.canAutoplayAsync')
+    }
+
+    async setAutoplayAsync(b: boolean): Promise<void> {
+        await PS('queue.setAutoplayAsync', b)
+    }
+
+    eventListeners = {}
+    /**
+     * musicItemChange:
+     *   args: index - index of current track in queue, -1 if no item
+     */
+    async addEventListenerAsync(type: 'musicItemChange', listener: (...args: any) => void) {
+        switch (type) {
+            case 'musicItemChange':
+                this.eventListeners[type] = listener
+                await PS('queue.addEventListener_musicItemChange');
+                break
+        }
+    }
 }
 
 export class DownloadsState {
@@ -536,9 +593,9 @@ export class DownloadsState {
         let { downloadType, mi, fetch, abort } = obj
 
         let poolName = `DownloadState_(${this._counter})`
-        let pool = MusicPlayer._funcsManager.makePool(poolName)
-        pool.addWithId(fetch, 'fetch')
-        pool.addWithId(abort, 'abort')
+        let pool = musicPlayer._poolManager.makePool(poolName)
+        pool.addWithId('fetch', fetch)
+        pool.addWithId('abort', abort)
 
         let val = []
         try {
@@ -548,12 +605,12 @@ export class DownloadsState {
                 console.log(`bad val:`, val)
             }
         } catch (e) {
-            MusicPlayer.logger.error('Error in DownloadsState.download(): ' + e)
-            MusicPlayer._funcsManager.deletePool(poolName)
+            musicPlayer.logger.error('Error in DownloadsState.download(): ' + e)
             throw e
+        } finally {
+            musicPlayer._poolManager.deletePool(poolName)
         }
 
-        MusicPlayer._funcsManager.deletePool(poolName)
         return val
     }
 
@@ -567,13 +624,13 @@ export class DownloadsState {
 
     async guardMusicItemLoadingAsync(mi: MusicItem, fn: (bf: any) => Promise<any>) {
         await this.removeAndAbortByTypeAsync('play');
-        await MusicPlayer.playback.stopWithAsync(PlayState.loading)
+        await musicPlayer.playback.stopWithAsync(PlayState.loading)
         try {
             return await this.guardLoadAsync('play', mi, fn)
         } catch (e) {
-            MusicPlayer.logger.warn('Exception downloading mi: ' + e)
+            musicPlayer.logger.warn('Exception downloading mi: ' + e)
             // if (playState == PlayState.loading) { // Should check?
-            await MusicPlayer.playback.stopWithAsync(PlayState.notReady)
+            await musicPlayer.playback.stopWithAsync(PlayState.notReady)
             // }
             throw e
         }
@@ -659,35 +716,20 @@ export class Helpers {
             onDataReceived: (recieved: number, contentLength: number) => {
                 z.number().nonnegative().parse(recieved)
                 z.number().nonnegative().parse(contentLength)
-                downloader.updateAsync(downloadId,
+                musicPlayer.downloader.updateAsync(downloadId,
                     `[${(recieved / contentLength * 100).toFixed(2)} %.]. Downloading "${name}"`
                 );
             }
         }
     }
 
-    async setAttrsAsync(attrs: KeyValue) {
-        let Source = MusicPlayer.source
-        // MusicPlayer.logger.blue('>>> Page attrs:', attrs)
-        if (attrs.hasOwnProperty('isShowSearch'))
-            await Source.isShowSearch_setAsync(attrs.isShowSearch)
-        if (attrs.hasOwnProperty('navType'))
-            await Source.navType_setAsync(attrs.navType)
-
-        if (attrs.hasOwnProperty('tabs')) {
-            if (attrs.navType === NavType.searchTabs) {
-                await Source.searchTabs_setAsync(attrs.tabs)
-            } else if (attrs.navType === NavType.tabs) {
-                await Source.tabs_setAsync(attrs.tabs)
-            }
+    async setAttrsAsync(attrs: Attrs) {
+        if (!attrs) {
+            musicPlayer.logger.error('nullish attrs:', attrs)
+            return
         }
-        if (attrs.hasOwnProperty('tabIdx')) {
-            if (attrs.navType === NavType.searchTabs) {
-                await Source.currSearchTabIdx_setAsync(attrs.tabIdx)
-            } else if (attrs.navType === NavType.tabs) {
-                await Source.currTabIdx_setAsync(attrs.tabIdx)
-            }
-        }
+        sAttrs.parse(attrs, { reportInput: true })
+        await PS('helpers.setAttrsAsync', attrs)
     }
 
     preloader(originalMethod: any, _context: any) {
@@ -710,18 +752,18 @@ export class Helpers {
     }
 
     static async _setPreloaderAsync(value: boolean) {
-        await MusicPlayer.source.isShowPreloader_setAsync(value)
-        await MusicPlayer.updateAppStateAsync()
+        await musicPlayer.source.isShowPreloader_setAsync(value)
+        await musicPlayer.updateAppStateAsync()
     }
 
     loading(originalMethod: any, _context: any) {
         async function replacementMethod(this: any, ...args: any[]) {
-            await MusicPlayer.playback.stopWithAsync(PlayState.loading)
+            await musicPlayer.playback.stopWithAsync(PlayState.loading)
             let res: any
             try {
                 res = await originalMethod.call(this, ...args);
             } catch (e) {
-                await MusicPlayer.playback.stopWithAsync(PlayState.notReady)
+                await musicPlayer.playback.stopWithAsync(PlayState.notReady)
                 throw e
             }
             return res;
@@ -730,7 +772,7 @@ export class Helpers {
     }
 }
 
-export const MusicPlayer = new MusicPlayerClass()
+export const musicPlayer = new MusicPlayer()
 
 
 function _checkControls(controls: Control[]) {
@@ -739,7 +781,7 @@ function _checkControls(controls: Control[]) {
         if (!('id' in el)) continue;
 
         if (ids.includes(el.id)) {
-            MusicPlayer.logger.error(`Duplicate id for:`, el)
+            musicPlayer.logger.error(`Duplicate id for:`, el)
             throw Error(`Duplicate id: ${el.id}`)
         }
         ids.push(el.id)
@@ -747,51 +789,54 @@ function _checkControls(controls: Control[]) {
 }
 
 function _addControlsToPool(controls: Control[], poolName: string) {
-    MusicPlayer.logger.log('_addControlsToPool')
-    var pool = MusicPlayer._funcsManager.getPool(poolName);
+    musicPlayer.logger.blue('_addControlsToPool')
+    var pool = musicPlayer._poolManager.getPool(poolName);
     for (let el of controls) {
         if ('onChanged' in el) {
-            pool.addWithId(el.onChanged, el.id)
+            pool.addWithId(el.id, el.onChanged)
+        }
+        if ('onTap' in el) {
+            pool.addWithId(el.id, el.onTap)
         }
     }
 }
 
 function _addNamesToActionBtns(obj: object) {
-    // MusicPlayer.logger.log('_addNamesToActionBtns')
+    // musicPlayer.logger.log('_addNamesToActionBtns')
 
     let namedFuncs = _findPropertyPathsWithValues(obj, 'actionBtn')
     for (let el of namedFuncs) {
         let actionBtn = el.value
         if (!actionBtn) {
-            MusicPlayer.logger.log(`Property '${el.path}' is nullish`)
+            musicPlayer.logger.log(`Property '${el.path}' is nullish`)
             continue
         }
         if (typeof actionBtn.callback !== "function") {
-            MusicPlayer.logger.warn(`Property '${el.path}' not function`)
+            musicPlayer.logger.warn(`Property '${el.path}' not function`)
             continue
         }
-        // MusicPlayer.logger.blue(`_callbackName '${el.path}' set`)
+        // musicPlayer.logger.blue(`_callbackName '${el.path}' set`)
         actionBtn._callbackName = el.path
     }
 }
 
 function _addActionBtnsToPool(obj: object, poolName: string) {
-    // MusicPlayer.logger.log('_addActionBtnsToPool for poolName', poolName)
+    // musicPlayer.logger.log('_addActionBtnsToPool for poolName', poolName)
 
-    var pool = MusicPlayer._funcsManager.getPool(poolName);
+    var pool = musicPlayer._poolManager.getPool(poolName);
     let namedFuncs = _findPropertyPathsWithValues(obj, 'actionBtn')
     for (let el of namedFuncs) {
         let actionBtn = el.value
         if (!actionBtn) {
-            MusicPlayer.logger.log(`Property '${el.path}' is nullish`)
+            musicPlayer.logger.log(`Property '${el.path}' is nullish`)
             continue
         }
         if (typeof actionBtn.callback !== "function") {
-            MusicPlayer.logger.warn(`Property '${el.path}' not function`)
+            musicPlayer.logger.warn(`Property '${el.path}' not function`)
             continue
         }
-        // MusicPlayer.logger.blue(`Property '${el.path}' set [${typeof actionBtn.callback}]`)
-        pool.addWithId(actionBtn.callback, el.path)
+        // musicPlayer.logger.blue(`Property '${el.path}' set [${typeof actionBtn.callback}]`)
+        pool.addWithId(el.path, actionBtn.callback)
     }
 }
 
