@@ -109,7 +109,7 @@ export class Runtime {
         MP('isTls1_3_set', isTls1_3)
     }
 
-    logger = new Logger('MpApi/runtime.ts: ')
+    logger = new Logger('MusicPlayer/runtime.ts: ')
 
     _mapper = new Mapper()
 

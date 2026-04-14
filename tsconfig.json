@@ -7,8 +7,8 @@
     "allowImportingTsExtensions": true,
     "moduleResolution": "bundler",
     "paths": {
-        "@MpApi/*": ["./src/MpApi/*"],
-        "@runtime/*": ["./src/MpApi/runtime/*"]
+        "@MusicPlayer/*": ["./src/MusicPlayer/*"],
+        "@runtime/*": ["./src/MusicPlayer/runtime/*"]
     }
   }
 }

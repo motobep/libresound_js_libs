@@ -10,7 +10,7 @@ import nodePolyfills from 'rollup-plugin-polyfill-node';
 import 'dotenv/config'
 
 
-const filename = 'MpApi'
+const filename = 'MusicPlayer'
 const src_dir = './src'
 const dist_dir = './dist'
 
@@ -65,16 +65,16 @@ function copyPlugin(from, to) {
 
 export default [
     {
-        input: src_dir + '/MpApi/MusicPlayer.ts',
+        input: src_dir + '/MusicPlayer/MusicPlayer.ts',
         output: [
             {
                 file: dist_dir + `/${filename}.js`,
-                name: filename,
+                name: `__MP_${filename}`,
                 format: 'iife',
                 strict: false,
                 sourcemap: true,
                 footer: `
-const musicPlayer = MpApi.musicPlayer
+const musicPlayer = __MP_MusicPlayer.musicPlayer
 var fetch = (...args) => {
     return musicPlayer.runtime.fetch(...args)
 }
@@ -84,8 +84,8 @@ var fetch = (...args) => {
         plugins: [
             alias({
                 entries: [
-                    { find: '@MpApi', replacement: path.resolve('./src/MpApi') },
-                    { find: '@runtime', replacement: path.resolve('./src/MpApi/runtime') },
+                    { find: '@MusicPlayer', replacement: path.resolve('./src/MusicPlayer') },
+                    { find: '@runtime', replacement: path.resolve('./src/MusicPlayer/runtime') },
                 ],
             }),
             commonjs(), json(), resolve(), typescript(), nodePolyfills(),

@@ -7,7 +7,7 @@
     "watch": "rollup -c -w",
     "build": "rollup -c",
     "clean": "rm -r dist",
-    "build_doc": "npx typedoc --plugin 'typedoc-material-theme' --customCss './src/style.css' --out documentation --favicon $LS_PLUGINS_REPO/public/images/favicon.png src/MpApi/*.ts",
+    "build_doc": "npx typedoc --plugin 'typedoc-material-theme' --customCss './src/style.css' --out documentation --favicon $LS_PLUGINS_REPO/public/images/favicon.png src/MusicPlayer/*.ts",
     "copy_doc": "cp -r documentation $LS_PLUGINS_REPO/public/",
     "doc": "npm run build_doc && npm run copy_doc"
   },
@@ -27,7 +27,7 @@
     "package-lock.json",
     "rollup.config.js",
     "tsconfig.json",
-    "src/MpApi/"
+    "src/MusicPlayer/"
   ],
   "author": "motobep",
   "license": "MIT",
