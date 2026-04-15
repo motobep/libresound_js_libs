@@ -33,7 +33,7 @@ export const sItem = z.object({
     title: z.string(),
     subtitle: z.string().optional(),
     thumbnailUrl: z.string().nullish(),
-    props: sKeyValue.optional(),
+    props: sKeyValue.nullish(),
 });
 export type Item = z.infer<typeof sItem>
 
@@ -62,7 +62,7 @@ export const sMusicItem = sItem.extend({
     }).nullish(),
     duration: z.int().optional(),
     extension: sExtension,
-    props: sKeyValue.optional(),
+    props: sKeyValue.nullish(),
 });
 export type MusicItem = z.infer<typeof sMusicItem>
 
@@ -71,7 +71,7 @@ export const sGroupItem = sItem.extend({
     title: z.string(),
     subtitle: z.string().optional(),
     thumbnailUrl: z.string().nullish(),
-    props: sKeyValue.optional(),
+    props: sKeyValue.nullish(),
 });
 export type GroupItem = z.infer<typeof sGroupItem>
 

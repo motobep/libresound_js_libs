@@ -43,13 +43,17 @@ export class Runtime {
             url = '' + url
         }
 
-        this._addRequestCookies(options)
-        this.logger.blue('headers.length', options.headers?.length)
-        this.logger.blue('cookie.length', options.headers?.cookie?.length)
+        if (options.credentials === 'always' || options.credentials === 'same-origin') {
+            this._addRequestCookies(options)
+            this.logger.blue('headers.length', options.headers?.length)
+            this.logger.blue('cookie.length', options.headers?.cookie?.length)
+        }
 
         let resp = await MP('fetch', { 'url': url, 'options': options })
 
-        this._saveResponseCookies(resp.cookies)
+        if (options.credentials === 'always' || options.credentials === 'same-origin') {
+            this._saveResponseCookies(resp.cookies)
+        }
 
         return _makeResp(resp, options['signal']);
     }
@@ -69,6 +73,7 @@ export class Runtime {
         return responseToRequestCookies(getCookie).join('; ')
     }
 
+    // FIXME: cookies growing. Reset cookies with the same name
     _saveResponseCookies(setCookie: string[]) {
         if (setCookie) {
             let cookies = setCookie

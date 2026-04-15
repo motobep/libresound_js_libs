@@ -618,10 +618,23 @@ export class DownloadsState {
         await PS('DownloadsState.removeAndAbortByTypeAsync', { type });
     }
 
+    /**
+     * Guard function to safely download.
+     * The function adds loading indicator, and removes it on end or failure
+     *
+     * Use `guardMusicItemLoadingAsync` for preparing MusicItem
+     */
     async guardDownloadAsync(mi: MusicItem, fn: (bf: any) => Promise<any>) {
         return await this.guardLoadAsync('download', mi, fn,)
     }
 
+    /**
+     * Guard function to safely prepare MusicItem while makeing fetch().
+     * The function adds loading indicator, and removes it on end or failure.
+     * Also it handles PlayState
+     *
+     * Use `guardDownloadAsync` for downloading files
+     */
     async guardMusicItemLoadingAsync(mi: MusicItem, fn: (bf: any) => Promise<any>) {
         await this.removeAndAbortByTypeAsync('play');
         await musicPlayer.playback.stopWithAsync(PlayState.loading)
@@ -636,6 +649,9 @@ export class DownloadsState {
         }
     }
 
+    /**
+     * The function adds loading indicator, and removes it on end or failure
+     */
     async guardLoadAsync(downloadType: string, mi: MusicItem, fn: (bf: any) => Promise<any>) {
         return await BytesFetcher.run(async (bf) => {
             return await this.download({
