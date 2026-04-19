@@ -1,6 +1,9 @@
-// import { MP } from "./Runtime"
+export type SendMessageType = (a: string, b: string) => any
+export declare const __dartjs_sendMessage: SendMessageType
 
-declare function MP(key: string, val: any): any;
+export function MP(a: string, b: any = null) {
+    return __dartjs_sendMessage(`MP.${a}`, JSON.stringify(b));
+}
 
 export class Logger {
     prefix: string
