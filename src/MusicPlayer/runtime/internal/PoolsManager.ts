@@ -1,5 +1,5 @@
 import { Logger } from '@runtime/Logger';
-import { z } from 'zod';
+import { z } from '../../zod';
 
 export class PoolsManager {
     pools = {}

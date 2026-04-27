@@ -1,5 +1,5 @@
 import { PS } from './MusicPlayer';
-import { z } from 'zod';
+import { z } from './zod';
 import { Logger } from '@runtime/Logger';
 
 function WV(a: string, b: any = null) {

@@ -2,6 +2,7 @@ import fs from 'fs'
 import path from 'path'
 
 import resolve from '@rollup/plugin-node-resolve';
+import replace from '@rollup/plugin-replace';
 import commonjs from '@rollup/plugin-commonjs';
 import json from '@rollup/plugin-json';
 import typescript from '@rollup/plugin-typescript'
@@ -34,6 +35,8 @@ if (typeof globalThis !== 'undefined' ) {
 }
 `
 }
+
+const IS_ENABLE_ZOD = process.env.IS_ENABLE_ZOD === '1' ? true : false
 
 function simpleTarget(name, footer) {
     return {
@@ -87,6 +90,10 @@ var fetch = (...args) => {
                     { find: '@MusicPlayer', replacement: path.resolve('./src/MusicPlayer') },
                     { find: '@runtime', replacement: path.resolve('./src/MusicPlayer/runtime') },
                 ],
+            }),
+            replace({
+                'process.env.IS_ENABLE_ZOD': IS_ENABLE_ZOD,
+                preventAssignment: true
             }),
             commonjs(), json(), resolve(), typescript(), nodePolyfills(),
             copyPlugin(`${dist_dir}/${filename}.js`, `${TARGET_DIR}/${filename}.js`),
