@@ -8,6 +8,7 @@ export function MP(a: string, b: any = null) {
 export class Logger {
     prefix: string
     is_mp_logger: boolean
+    isDisabled: boolean = false
 
     constructor(prefix: string, is_mp_logger: boolean = false) {
         this.prefix = prefix
@@ -30,6 +31,7 @@ export class Logger {
         this.logGeneral(args, 'red')
     }
     logGeneral(args: any[], color: string) {
+        if (this.isDisabled) return
         if (this.is_mp_logger) {
             let argsStr = args.map(
                 (el) => typeof el === 'string' ? el : JSON.stringify(el))

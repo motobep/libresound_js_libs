@@ -36,7 +36,7 @@ export class PoolsManager {
         delete this.pools[name]
     }
 
-    logger = new Logger('🔌 PoolsManager:')
+    logger = new Logger('🔌 PoolsManager:', true)
 }
 
 export class Pool {

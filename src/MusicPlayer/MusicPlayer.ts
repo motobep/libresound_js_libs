@@ -30,9 +30,9 @@ export class MusicPlayer {
     propertyStorage = new PropertyStorage()
     helpers = new Helpers()
     webView = new WebView()
-    logger = new Logger('🔌MusicPlayer: ')
+    logger = new Logger('🔌MusicPlayer: ', true)
     settings = {
-        logger: new Logger('🔌settings '),
+        logger: new Logger('🔌settings ', true),
         async setControlsAsync(controls: Control[]) {
             z.array(sControl).parse(controls)
             _checkControls(controls)
@@ -432,6 +432,16 @@ export class Playback {
         await PS('playback.stopWithAsync', state);
     }
 
+    /** @Unstable */
+    async resumeAsync() {
+        await PS('playback.resumeAsync');
+    }
+
+    /** @Unstable */
+    async pauseAsync() {
+        await PS('playback.pauseAsync');
+    }
+
     async setUrlSourceAsync(mi: MusicItem) {
         sMusicItem.parse(mi)
         return await PS('playback.setUrlSourceAsync', mi);
@@ -599,10 +609,10 @@ export class DownloadsState {
 
         let val = []
         try {
-            console.log(`calling PS register`)
+            musicPlayer.logger.log(`calling PS register`)
             val = await PS('DownloadsState.download', { downloadType, id: mi.id, text: mi.title, poolName });
             if (!val || val.length === 0) {
-                console.log(`bad val:`, val)
+                musicPlayer.logger.log(`bad val:`, val)
             }
         } catch (e) {
             musicPlayer.logger.error('Error in DownloadsState.download(): ' + e)
@@ -772,12 +782,14 @@ export class Helpers {
         await musicPlayer.updateAppStateAsync()
     }
 
+    /** @Unstable */
     loading(originalMethod: any, _context: any) {
         async function replacementMethod(this: any, ...args: any[]) {
-            await musicPlayer.playback.stopWithAsync(PlayState.loading)
             let res: any
             try {
+                await musicPlayer.playback.stopWithAsync(PlayState.loading)
                 res = await originalMethod.call(this, ...args);
+                await musicPlayer.playback.resumeAsync()
             } catch (e) {
                 await musicPlayer.playback.stopWithAsync(PlayState.notReady)
                 throw e

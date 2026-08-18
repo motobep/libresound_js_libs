@@ -29,7 +29,7 @@ export class WebView {
         this.logger.log('isNullAsync')
         return await WV('isNullAsync')
     }
-    logger = new Logger('🔌 WebView:')
+    logger = new Logger('🔌 WebView:', true)
 }
 
 class CookieManager {
