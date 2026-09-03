@@ -115,8 +115,8 @@ globalThis.ReadableStream = __Streams.ReadableStream
 // globalThis.WritableStream = __Streams.WritableStream
 `),
     simpleTarget('AbortController', `
-const AbortSignal = __AbortController.AbortController
-const AbortController = __AbortController.AbortSignal
+const AbortSignal = __AbortController.AbortSignal
+const AbortController = __AbortController.AbortController
 `),
     simpleTarget('URL', exportFooter('URL') + '\n' + `
 const URLSearchParams = __URL.URLSearchParams
