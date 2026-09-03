@@ -5,8 +5,7 @@ export class AbortSignal {
         if (!this._onabort) {
             this.aborted = true
             this.reason = 'user abort (Undefined handler)'
-            console.log('Undefined _onabort. Throwing')
-            throw new Error('Undefined _onabort')
+            console.log('_onabort is null')
         } else {
             this._onabort()
             this.aborted = true
